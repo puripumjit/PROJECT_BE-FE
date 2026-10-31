@@ -73,7 +73,8 @@ CREATE TABLE games (
   how_to_play     TEXT[]       NOT NULL DEFAULT '{}',  -- วิธีเล่น (ย่อ) ลำดับใน array = ลำดับข้อ
   highlights      TEXT[]       NOT NULL DEFAULT '{}',  -- จุดเด่น
   tags            TEXT[]       NOT NULL DEFAULT '{}',  -- แท็ก เช่น {ครอบครัว,วางพื้นที่}
-  is_published    BOOLEAN      NOT NULL DEFAULT TRUE,  -- ซ่อน/แสดงบนหน้าเว็บ
+  is_published    BOOLEAN      NOT NULL DEFAULT TRUE,
+  is_recommended  BOOLEAN      NOT NULL DEFAULT FALSE,  -- ซ่อน/แสดงบนหน้าเว็บ
   created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
   CONSTRAINT games_players_chk CHECK (min_players >= 1 AND min_players <= max_players),
@@ -104,7 +105,7 @@ CREATE INDEX user_favorites_game_idx ON user_favorites (game_id);
 -- =====================================================================
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 INSERT INTO users (username, email, password_hash, display_name, role)
-VALUES ('admin', 'admin@example.com', '123456', 'Admin', 'admin');
+VALUES ('admin', 'admin@example.com', crypt('123456', gen_salt('bf')), 'Admin', 'admin');
 
 
 -- =====================================================================

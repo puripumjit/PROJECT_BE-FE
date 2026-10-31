@@ -4,7 +4,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 const links = [
   { label: 'หน้าแรก', to: '/' },
   { label: 'หมวดหมู่', to: '/categories' },
-  { label: 'เกมทั้งหมด', to: '/games' },
+  { label: 'รายการโปรด', to: '/favorites' },
   { label: 'เกี่ยวกับเรา', to: '/about' },
 ]
 
