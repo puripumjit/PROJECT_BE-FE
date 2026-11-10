@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import Cover from '../components/Cover.jsx'
 
 const API = import.meta.env.VITE_API_URL ?? ''
 
@@ -253,15 +254,7 @@ export default function GameDetail() {
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
           {/* รูปปก + หัวใจมุมขวาบน */}
           <div className="relative mx-auto w-36 shrink-0 sm:mx-0 sm:w-44">
-            <div className="aspect-[3/4] overflow-hidden rounded-xl bg-white/15 shadow-2xl ring-2 ring-white/50">
-              {game.image_url ? (
-                <img src={game.image_url} alt={game.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="grid h-full w-full place-items-center text-5xl font-bold text-white" aria-hidden="true">
-                  {game.name.slice(0, 2)}
-                </div>
-              )}
-            </div>
+            <Cover game={game} showBadge={false} className="aspect-square w-full shadow-2xl ring-2 ring-white/50" />
             <button
               type="button"
               onClick={toggleFav}
@@ -429,20 +422,13 @@ export default function GameDetail() {
               </Link>
             </div>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {related.map((g, i) => (
+              {related.map((g) => (
                 <li key={g.slug}>
                   <Link
                     to={`/games/${g.slug}`}
                     className="group flex h-full items-center gap-3 rounded-2xl bg-white p-2.5 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md hover:ring-brand/50"
                   >
-                    <span
-                      className={`grid h-14 w-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br text-base font-bold text-white ${
-                        COVERS[(Number(g.id) || i) % COVERS.length]
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {g.image_url ? <img src={g.image_url} alt="" className="h-full w-full object-cover" /> : g.name.slice(0, 2)}
-                    </span>
+                    <Cover game={g} showBadge={false} className="h-14 w-14" />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-bold text-navy group-hover:text-brand-dark">{g.name}</span>
                       <span className="mt-0.5 block truncate text-xs text-slate-500">{category.name_th}</span>

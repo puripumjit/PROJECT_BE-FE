@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import Cover from '../components/Cover.jsx'
 
 // ถ้าตั้ง proxy ใน vite.config.js ให้ปล่อยว่างไว้ (เรียก /api/... ได้เลย)
 // ถ้าไม่ใช้ proxy ให้สร้างไฟล์ .env แล้วใส่ VITE_API_URL=http://localhost:8080
@@ -34,15 +35,6 @@ const SORTS = {
   players: { label: 'จำนวนผู้เล่นมากสุด', fn: (a, b) => b.max_players - a.max_players },
 }
 
-// ยังไม่มีรูปปกในฐานข้อมูล เลยใช้สีไล่เฉดแทนก่อน (ถ้ามี game.image_url จะแสดงรูปแทน)
-const COVERS = [
-  'from-amber-400 to-orange-600',
-  'from-emerald-400 to-teal-700',
-  'from-sky-400 to-indigo-600',
-  'from-rose-400 to-red-700',
-  'from-violet-400 to-purple-700',
-  'from-lime-400 to-green-700',
-]
 const TAG_STYLES = [
   'bg-amber-100 text-amber-800',
   'bg-sky-100 text-sky-800',
@@ -106,23 +98,7 @@ function GameCard({ game, category, list }) {
         list ? 'items-center gap-4' : 'flex-col'
       }`}
     >
-      <div
-        className={`relative grid shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br text-4xl font-bold text-white/90 ${
-          COVERS[game.id % COVERS.length]
-        } ${list ? 'h-24 w-24' : 'aspect-square w-full'}`}
-        aria-hidden="true"
-      >
-        {game.image_url ? (
-          <img src={game.image_url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          game.name.slice(0, 2)
-        )}
-        {game.is_recommended && (
-          <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs font-semibold text-brand-dark">
-            แนะนำ
-          </span>
-        )}
-      </div>
+      <Cover game={game} className={list ? 'h-24 w-24' : 'aspect-square w-full'} />
 
       <div className={list ? 'min-w-0 flex-1' : 'mt-3'}>
         <h3 className="truncate font-semibold text-navy group-hover:text-brand-dark">{game.name}</h3>

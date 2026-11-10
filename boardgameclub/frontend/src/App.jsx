@@ -6,6 +6,8 @@ import Category from './pages/Category.jsx'
 import GameDetail from './pages/GameDetail.jsx'
 import Favorites from './pages/Favorites.jsx'
 import About from './pages/About.jsx'
+import Login from './pages/Login.jsx'
+import Register from './pages/Register.jsx'
 
 function Layout() {
   return (
@@ -29,8 +31,8 @@ export default function App() {
         <Route path="games" element={<Category />} />
         <Route path="favorites" element={<Favorites />} />
         <Route path="about" element={<About />} />
-        <Route path="login" element={<Placeholder title="เข้าสู่ระบบ" />} />
-        <Route path="register" element={<Placeholder title="สมัครสมาชิก" />} />
+         <Route path="login" element={<Login />} />        {/* แก้ */}
+        <Route path="register" element={<Register />} />  {/* แก้ */}
         <Route path="*" element={<Placeholder title="ไม่พบหน้านี้" />} />
       </Route>
     </Routes>

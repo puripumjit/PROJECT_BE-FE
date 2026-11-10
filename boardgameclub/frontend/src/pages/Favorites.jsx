@@ -1,16 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import Cover from '../components/Cover.jsx'
 
 const API = import.meta.env.VITE_API_URL ?? ''
-
-const COVERS = [
-  'from-amber-400 to-orange-600',
-  'from-emerald-400 to-teal-700',
-  'from-sky-400 to-indigo-600',
-  'from-rose-400 to-red-700',
-  'from-violet-400 to-purple-700',
-  'from-lime-400 to-green-700',
-]
 
 const checkJson = (r) => {
   if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -54,18 +46,8 @@ const ICON = {
 function FavCard({ game, onRemove }) {
   return (
     <li className="flex flex-col rounded-3xl bg-white p-3.5 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md">
-      <Link
-        to={`/games/${game.slug}`}
-        className={`grid aspect-[4/3] place-items-center overflow-hidden rounded-2xl bg-gradient-to-br text-5xl font-bold text-white/90 ${
-          COVERS[(Number(game.id) || 0) % COVERS.length]
-        }`}
-        aria-label={`ดูรายละเอียด ${game.name}`}
-      >
-        {game.image_url ? (
-          <img src={game.image_url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span aria-hidden="true">{game.name.slice(0, 2)}</span>
-        )}
+      <Link to={`/games/${game.slug}`} aria-label={`ดูรายละเอียด ${game.name}`}>
+        <Cover game={game} showBadge={false} className="aspect-[4/3] w-full rounded-2xl" />
       </Link>
 
       <div className="mt-3 flex-1 px-1">

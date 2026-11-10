@@ -354,6 +354,62 @@ func handleRemoveFavorite(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// POST /api/register  {"username":"...","email":"...","password":"..."}
+func handleRegister(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "ข้อมูลไม่ถูกต้อง")
+		return
+	}
+
+	body.Username = strings.TrimSpace(body.Username)
+	body.Email = strings.ToLower(strings.TrimSpace(body.Email))
+
+	if len(body.Username) < 3 || len(body.Username) > 30 {
+		writeErr(w, http.StatusBadRequest, "ชื่อผู้ใช้ต้องยาว 3-30 ตัวอักษร")
+		return
+	}
+	if !strings.Contains(body.Email, "@") || len(body.Email) > 254 {
+		writeErr(w, http.StatusBadRequest, "รูปแบบอีเมลไม่ถูกต้อง")
+		return
+	}
+	if len(body.Password) < 8 {
+		writeErr(w, http.StatusBadRequest, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "เกิดข้อผิดพลาดภายในระบบ")
+		return
+	}
+
+	var id int64
+	err = db.QueryRow(r.Context(),
+		`INSERT INTO users (username, email, password_hash, display_name)
+		 VALUES ($1, $2, $3, $1)
+		 RETURNING id`,
+		body.Username, body.Email, string(hash)).Scan(&id)
+	if err != nil {
+		if strings.Contains(err.Error(), "23505") { // ชื่อผู้ใช้หรืออีเมลซ้ำ
+			writeErr(w, http.StatusConflict, "ชื่อผู้ใช้หรืออีเมลนี้ถูกใช้แล้ว")
+			return
+		}
+		log.Printf("register error: %v", err) // ดูสาเหตุจริงใน terminal
+		writeErr(w, http.StatusInternalServerError, "สมัครสมาชิกไม่สำเร็จ")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"id":       id,
+		"username": body.Username,
+		"email":    body.Email,
+	})
+}
 // ---------- main ----------
 
 func main() {
@@ -380,6 +436,7 @@ func main() {
 	mux.HandleFunc("GET /api/games", handleGames)
 	mux.HandleFunc("GET /api/games/{slug}", handleGameDetail)
 	mux.HandleFunc("POST /api/login", handleLogin)
+	mux.HandleFunc("POST /api/register", handleRegister)
 	mux.HandleFunc("GET /api/favorites", handleFavorites)
 	mux.HandleFunc("PUT /api/favorites/{slug}", handleAddFavorite)
 	mux.HandleFunc("DELETE /api/favorites/{slug}", handleRemoveFavorite)
