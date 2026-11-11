@@ -165,7 +165,7 @@ function GameCard({ game, category, tagStyle, list, saved, onSave }) {
       >
         <Cover game={game} className={list ? 'h-24 w-24 shrink-0' : 'aspect-[4/5] w-full'} />
 
-        <div className={list ? 'min-w-0 flex-1 pr-10' : 'mt-3 px-1 pb-1'}>
+        <div className={list ? 'min-w-0 flex-1 pr-12' : 'mt-3 px-1 pb-1'}>
           <h3 className="truncate text-base font-bold text-navy group-hover:text-brand-dark">{game.name}</h3>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-4 text-xs text-slate-500">
             <span className="flex items-center gap-1.5">
@@ -178,22 +178,23 @@ function GameCard({ game, category, tagStyle, list, saved, onSave }) {
             </span>
           </p>
           {category && (
-            <span className={`mt-3 inline-block max-w-full truncate rounded-full px-3 py-1.5 text-xs font-semibold ${tagStyle}`}>
+            <span className={`mt-3 inline-block max-w-[calc(100%-2.75rem)] truncate rounded-full px-3 py-1.5 text-xs font-semibold ${tagStyle}`}>
               {category.name_th}
             </span>
           )}
         </div>
       </Link>
 
-      {/* ปุ่มหัวใจ (อยู่นอก Link เพื่อไม่ให้กดแล้วเปลี่ยนหน้า) */}
+      {/* ปุ่มหัวใจ: อยู่มุมขวาล่างของการ์ด (ไม่ทับป้าย "แนะนำ" บนรูป)
+          วางนอก Link เพื่อไม่ให้กดแล้วเปลี่ยนหน้า */}
       <button
         type="button"
         aria-label={saved ? 'เอาออกจากรายการโปรด' : 'เพิ่มในรายการโปรด'}
         aria-pressed={saved}
         onClick={() => onSave(game.id)}
-        className={`absolute right-5 top-5 grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow-sm transition hover:scale-110 ${
+        className={`absolute grid h-8 w-8 place-items-center rounded-full bg-white shadow-sm ring-1 ring-slate-100 transition hover:scale-110 ${
           saved ? 'text-rose-500' : 'text-slate-500'
-        } ${list ? 'top-1/2 -translate-y-1/2 hover:!scale-110' : ''}`}
+        } ${list ? 'right-5 top-1/2 -translate-y-1/2' : 'bottom-4 right-5'}`}
       >
         <Icon name="heart" className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
       </button>
@@ -304,8 +305,14 @@ export default function Category() {
       return next
     })
 
+  // ต้องเป็น true/false เสมอ (ถ้าเป็นเลข 0 React จะแสดงเลข 0 บนหน้าเว็บ)
   const hasFilter =
-    query || filters.categories.length || filters.players.length || filters.time.length || filters.age.length
+    query.trim() !== '' ||
+    filters.categories.length > 0 ||
+    filters.players.length > 0 ||
+    filters.time.length > 0 ||
+    filters.age.length > 0
+
   const clearAll = () => {
     setFilters(EMPTY_FILTERS)
     setQuery('')

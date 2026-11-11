@@ -263,10 +263,12 @@ export default function GameDetail() {
       </nav>
 
       {/* แบนเนอร์ */}
-      <header className={`relative overflow-hidden rounded-3xl bg-gradient-to-br px-6 pb-14 pt-6 shadow-lg md:px-10 md:pt-8 ${COVERS[idx % COVERS.length]}`}>
-        <div className="absolute inset-0 bg-slate-900/35" aria-hidden="true" />
-        <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/10" aria-hidden="true" />
-        <div className="absolute -bottom-28 right-1/3 h-64 w-64 rounded-full bg-white/10" aria-hidden="true" />
+      <header
+        className="relative overflow-hidden rounded-3xl px-6 pb-14 pt-6 shadow-lg md:px-10 md:pt-8"
+        style={{ background: 'linear-gradient(100deg,#0b1437 0%,#14275f 60%,#1d3a8a 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-orange-500/25 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-28 right-1/3 h-64 w-64 rounded-full bg-sky-400/20 blur-3xl" aria-hidden="true" />
 
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
           {/* รูปปก + หัวใจมุมขวาบน */}
@@ -277,9 +279,8 @@ export default function GameDetail() {
               onClick={toggleFav}
               aria-pressed={isFav}
               aria-label={isFav ? 'เอาออกจากรายการโปรด' : 'เพิ่มในรายการโปรด'}
-              className={`absolute -right-2 -top-2 grid h-9 w-9 place-items-center rounded-full shadow-lg transition active:scale-90 ${
-                isFav ? 'bg-rose-500 text-white' : 'bg-white text-rose-500 hover:bg-rose-50'
-              }`}
+              className={`absolute -right-2 -top-2 grid h-9 w-9 place-items-center rounded-full shadow-lg transition active:scale-90 ${isFav ? 'bg-rose-500 text-white' : 'bg-white text-rose-500 hover:bg-rose-50'
+                }`}
             >
               <Svg d={ICON.heart} className="h-5 w-5" fill={isFav ? 'currentColor' : 'none'} />
             </button>
@@ -300,9 +301,8 @@ export default function GameDetail() {
                 type="button"
                 onClick={toggleFav}
                 aria-pressed={isFav}
-                className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition active:scale-95 ${
-                  isFav ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-white text-navy hover:bg-slate-100'
-                }`}
+                className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold shadow-md transition active:scale-95 ${isFav ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-white text-navy hover:bg-slate-100'
+                  }`}
               >
                 <Svg d={ICON.heart} className="h-4 w-4" fill={isFav ? 'currentColor' : 'none'} />
                 {isFav ? 'อยู่ในรายการโปรดแล้ว' : 'เพิ่มในรายการโปรด'}
@@ -334,9 +334,8 @@ export default function GameDetail() {
               role="tab"
               aria-selected={tab === key}
               onClick={() => setTab(key)}
-              className={`rounded-full px-5 py-2 text-sm font-bold transition ${
-                tab === key ? 'bg-navy text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+              className={`rounded-full px-5 py-2 text-sm font-bold transition ${tab === key ? 'bg-navy text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
             >
               {label}
             </button>

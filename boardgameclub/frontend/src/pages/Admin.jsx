@@ -272,10 +272,263 @@ function GameList({ games, categories, loading, onEdit, onDelete }) {
   )
 }
 
+/* ---------- แท็บ: ประวัติการเข้าใช้งาน (ดูอย่างเดียว) ---------- */
+const AVATAR_COLORS = ['#fb923c', '#38bdf8', '#a78bfa', '#34d399', '#f472b6', '#facc15']
+
+function ago(iso) {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
+  if (s < 60) return 'เมื่อสักครู่'
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m} นาทีที่แล้ว`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} ชั่วโมงที่แล้ว`
+  return `${Math.floor(h / 24)} วันที่แล้ว`
+}
+
+const fmtDate = (iso) => new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
+
+function deviceOf(ua = '') {
+  const os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : /Mac OS/i.test(ua) ? 'macOS' : /Linux/i.test(ua) ? 'Linux' : 'ไม่ทราบระบบ'
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'เบราว์เซอร์อื่น'
+  return `${browser} · ${os}`
+}
+
+function pageList(cur, total) {
+  const nums = [...new Set([1, total, cur - 1, cur, cur + 1])].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
+  const out = []
+  nums.forEach((p, i) => {
+    if (i > 0 && p - nums[i - 1] > 1) out.push('…')
+    out.push(p)
+  })
+  return out
+}
+
+function StatCard({ label, value, hint, bg, color }) {
+  return (
+    <div style={{ padding: '16px 18px', borderRadius: 16, background: bg, border: '1px solid rgba(15,31,75,.06)' }}>
+      <p style={{ margin: 0, fontSize: 13, color: '#475569' }}>{label}</p>
+      <p style={{ margin: '4px 0 0', fontSize: 26, fontWeight: 800, color }}>{value}</p>
+      {hint && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b' }}>{hint}</p>}
+    </div>
+  )
+}
+
+function Badge({ bg, color, children }) {
+  return (
+    <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 999, background: bg, color, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+      {children}
+    </span>
+  )
+}
+
+function LoginLogs() {
+  const [q, setQ] = useState('')
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [role, setRole] = useState('')
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [tick, setTick] = useState(0)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // หน่วงการค้นหาเล็กน้อย ไม่ยิง API ทุกตัวอักษร
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(q.trim())
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(t)
+  }, [q])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    if (search) params.set('q', search)
+    if (status) params.set('status', status)
+    if (role) params.set('role', role)
+
+    api(`/api/admin/login-logs?${params}`)
+      .then((d) => !cancelled && setData(d))
+      .catch((e) => !cancelled && setError(e.message))
+      .finally(() => !cancelled && setLoading(false))
+    return () => {
+      cancelled = true
+    }
+  }, [search, status, role, page, limit, tick])
+
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
+  const stats = data?.stats
+  const pages = Math.max(1, Math.ceil(total / limit))
+
+  const th = { textAlign: 'left', padding: '12px', fontSize: 13, fontWeight: 700, color: '#475569', background: '#eef2fb', whiteSpace: 'nowrap' }
+  const td = { padding: '11px 12px', fontSize: 14, color: NAVY, borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap' }
+  const select = { ...inputStyle, width: 'auto', padding: '10px 14px', borderRadius: 12 }
+  const pageBtn = (active, disabled) => ({
+    minWidth: 36,
+    height: 36,
+    padding: '0 10px',
+    borderRadius: 10,
+    border: active ? 0 : '1px solid #e2e8f0',
+    background: active ? '#2563eb' : '#fff',
+    color: active ? '#fff' : NAVY,
+    fontWeight: 700,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.4 : 1,
+  })
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 20 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, color: NAVY }}>ประวัติการเข้าใช้งาน</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: '#64748b' }}>ดูว่าใครเข้าสู่ระบบเมื่อไหร่ (ดูอย่างเดียว ไม่สามารถแก้ไขได้)</p>
+        </div>
+        <button type="button" onClick={() => setTick((n) => n + 1)} style={{ padding: '10px 18px', borderRadius: 999, border: '1.5px solid #e2e8f0', background: '#fff', color: NAVY, fontWeight: 700, cursor: 'pointer' }}>
+          ↻ รีเฟรช
+        </button>
+      </div>
+
+      {/* สถิติ */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 20 }}>
+        <StatCard label="เข้าสู่ระบบวันนี้" value={stats ? `${stats.logins_today} ครั้ง` : '–'} bg="#eff6ff" color="#1d4ed8" />
+        <StatCard label="ผู้ใช้ที่เข้าวันนี้" value={stats ? `${stats.unique_today} คน` : '–'} hint="ไม่นับซ้ำ" bg="#ecfdf5" color="#047857" />
+        <StatCard label="เข้าไม่สำเร็จวันนี้" value={stats ? `${stats.failed_today} ครั้ง` : '–'} bg="#fef2f2" color="#b91c1c" />
+        <StatCard label="เข้าใช้งานล่าสุด" value={stats?.last_login_at ? ago(stats.last_login_at) : '–'} bg="#fff7ed" color="#c2410c" />
+      </div>
+
+      {/* ค้นหา / ตัวกรอง */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ค้นหาชื่อผู้ใช้หรืออีเมล…"
+          style={{ ...inputStyle, flex: '1 1 260px', borderRadius: 12 }}
+          onFocus={focus}
+          onBlur={blur}
+        />
+        <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }} style={select} aria-label="กรองตามผลการเข้าสู่ระบบ">
+          <option value="">ผลทั้งหมด</option>
+          <option value="success">สำเร็จ</option>
+          <option value="failed">ไม่สำเร็จ</option>
+        </select>
+        <select value={role} onChange={(e) => { setRole(e.target.value); setPage(1) }} style={select} aria-label="กรองตามบทบาท">
+          <option value="">บทบาททั้งหมด</option>
+          <option value="admin">ผู้ดูแลระบบ</option>
+          <option value="member">สมาชิกทั่วไป</option>
+        </select>
+      </div>
+
+      {error && (
+        <div role="alert" style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
+      {/* ตาราง */}
+      <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 14, background: '#fff' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={th}>ผู้ใช้</th>
+              <th style={th}>อีเมล</th>
+              <th style={th}>บทบาท</th>
+              <th style={th}>ผล</th>
+              <th style={th}>เวลา</th>
+              <th style={th}>IP</th>
+              <th style={th}>อุปกรณ์</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((l) => (
+              <tr key={l.id}>
+                <td style={td}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontWeight: 700 }}>
+                    <span
+                      aria-hidden="true"
+                      style={{ display: 'grid', placeItems: 'center', width: 34, height: 34, borderRadius: '50%', background: AVATAR_COLORS[l.username.charCodeAt(0) % AVATAR_COLORS.length], color: '#fff', fontSize: 14 }}
+                    >
+                      {l.username.slice(0, 1).toUpperCase()}
+                    </span>
+                    {l.username}
+                  </span>
+                </td>
+                <td style={{ ...td, color: '#475569' }}>{l.email || '–'}</td>
+                <td style={td}>
+                  {l.role === 'admin' ? (
+                    <Badge bg="#fff4d6" color="#b45309">👑 ผู้ดูแลระบบ</Badge>
+                  ) : l.role === 'member' ? (
+                    <Badge bg="#e0eaff" color="#1d4ed8">สมาชิกทั่วไป</Badge>
+                  ) : (
+                    <span style={{ color: '#94a3b8' }}>–</span>
+                  )}
+                </td>
+                <td style={td}>
+                  {l.success ? (
+                    <span style={{ color: '#047857', fontWeight: 700 }}>● สำเร็จ</span>
+                  ) : (
+                    <span style={{ color: '#b91c1c', fontWeight: 700 }}>● ไม่สำเร็จ</span>
+                  )}
+                </td>
+                <td style={td} title={fmtDate(l.created_at)}>
+                  <div>{ago(l.created_at)}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>{fmtDate(l.created_at)}</div>
+                </td>
+                <td style={{ ...td, fontFamily: 'ui-monospace, monospace', fontSize: 13 }}>{l.ip || '–'}</td>
+                <td style={{ ...td, color: '#475569' }} title={l.user_agent}>{deviceOf(l.user_agent)}</td>
+              </tr>
+            ))}
+            {loading && (
+              <tr>
+                <td colSpan={7} style={{ ...td, textAlign: 'center', color: '#64748b' }}>กำลังโหลด…</td>
+              </tr>
+            )}
+            {!loading && !error && items.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ ...td, textAlign: 'center', color: '#64748b' }}>ยังไม่มีประวัติการเข้าใช้งาน</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* แบ่งหน้า */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#475569' }}>
+          แสดงผลต่อหน้า
+          <select value={limit} onChange={(e) => { setLimit(Number(e.target.value)); setPage(1) }} style={select}>
+            {[10, 20, 50].map((n) => (
+              <option key={n} value={n}>{n} รายการ</option>
+            ))}
+          </select>
+          <span style={{ color: '#64748b' }}>ทั้งหมด {total} รายการ</span>
+        </label>
+
+        <nav aria-label="เลือกหน้า" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button type="button" style={pageBtn(false, page <= 1)} disabled={page <= 1} onClick={() => setPage(page - 1)} aria-label="หน้าก่อนหน้า">‹</button>
+          {pageList(page, pages).map((p, i) =>
+            p === '…' ? (
+              <span key={`gap-${i}`} style={{ color: '#94a3b8', padding: '0 4px' }}>…</span>
+            ) : (
+              <button key={p} type="button" style={pageBtn(p === page, false)} onClick={() => setPage(p)} aria-current={p === page ? 'page' : undefined}>{p}</button>
+            ),
+          )}
+          <button type="button" style={pageBtn(false, page >= pages)} disabled={page >= pages} onClick={() => setPage(page + 1)} aria-label="หน้าถัดไป">›</button>
+        </nav>
+      </div>
+    </div>
+  )
+}
+
 /* ---------- หน้าแอดมิน ---------- */
 export default function Admin() {
   const { user } = getAuth()
-  const [tab, setTab] = useState('add') // 'add' | 'list'
+  const [tab, setTab] = useState('add') // 'add' | 'list' | 'logs'
   const [editing, setEditing] = useState(null)
   const [games, setGames] = useState([])
   const [categories, setCategories] = useState([])
@@ -356,11 +609,14 @@ export default function Admin() {
           <button type="button" style={navBtn(tab === 'list' || !!editing)} onClick={() => goTab('list')}>
             ✎ แก้ไข/ลบเกม
           </button>
+          <button type="button" style={navBtn(tab === 'logs' && !editing)} onClick={() => goTab('logs')}>
+            ▤ ประวัติการเข้าใช้งาน
+          </button>
         </aside>
 
         {/* เนื้อหา */}
         <main style={{ flex: '1 1 480px', minWidth: 0, padding: '32px 36px' }}>
-          {notice && (
+          {notice && tab !== 'logs' && (
             <div role="status" style={{ marginBottom: 18, padding: '12px 14px', borderRadius: 12, background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', fontSize: 14 }}>
               {notice}
             </div>
@@ -371,6 +627,8 @@ export default function Admin() {
           {editing && <GameForm key={editing.id} categories={categories} editing={editing} onCancel={() => goTab('list')} onSaved={(m) => { setEditing(null); setTab('list'); setNotice(m); load() }} />}
 
           {tab === 'list' && !editing && <GameList games={games} categories={categories} loading={loading} onEdit={(g) => { setNotice(''); setEditing(g) }} onDelete={handleDelete} />}
+
+          {tab === 'logs' && !editing && <LoginLogs />}
         </main>
       </div>
     </div>
