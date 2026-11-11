@@ -2,8 +2,8 @@ import { useEffect, useId, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 const API = import.meta.env.VITE_API_URL ?? ''
-// ปรับ path ให้ตรงกับ backend ของคุณ (คาดว่าส่ง { email, password } แล้วได้ { token, user } กลับมา)
-const LOGIN_URL = `${API}/api/auth/login`
+// backend: POST /api/login  { username (หรืออีเมลก็ได้), password }  ->  { token, user }
+const LOGIN_URL = `${API}/api/login`
 
 const NAVY_GRAD = 'linear-gradient(160deg,#0b1437 0%,#14275f 55%,#1d3a8a 100%)'
 const ORANGE = '#f97316'
@@ -108,7 +108,7 @@ function Field({ label, icon, right, ...input }) {
 
 export default function Login() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
   const [remember, setRemember] = useState(true)
@@ -122,8 +122,8 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    if (!email.trim() || !password) {
-      setError('กรุณากรอกอีเมลและรหัสผ่านให้ครบ')
+    if (!username.trim() || !password) {
+      setError('กรุณากรอกชื่อผู้ใช้หรืออีเมล และรหัสผ่านให้ครบ')
       return
     }
     setLoading(true)
@@ -131,11 +131,16 @@ export default function Login() {
       const res = await fetch(LOGIN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ username: username.trim(), password }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง')
-      if (data.token) (remember ? localStorage : sessionStorage).setItem('token', data.token)
+      if (!res.ok) throw new Error(res.status === 401 ? 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง' : data.error || 'เข้าสู่ระบบไม่สำเร็จ')
+      const store = remember ? localStorage : sessionStorage
+      localStorage.removeItem('token')
+      sessionStorage.removeItem('token')
+      store.setItem('token', data.token)
+      store.setItem('user', JSON.stringify(data.user))
+      window.dispatchEvent(new Event('auth-change')) // ให้ Navbar อัปเดตทันที
       navigate('/')
     } catch (err) {
       setError(err.message || 'เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง')
@@ -202,7 +207,7 @@ export default function Login() {
             </div>
           )}
 
-          <Field label="อีเมล" icon={ICON.mail} type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Field label="ชื่อผู้ใช้หรืออีเมล" icon={ICON.mail} type="text" autoComplete="username" placeholder="ชื่อผู้ใช้ หรือ you@example.com" value={username} onChange={(e) => setUsername(e.target.value)} />
 
           <Field
             label="รหัสผ่าน"

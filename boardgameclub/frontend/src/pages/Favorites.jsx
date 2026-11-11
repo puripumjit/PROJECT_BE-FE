@@ -1,32 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Cover from '../components/Cover.jsx'
+import { fetchFavorites, isLoggedIn, removeFavorite } from '../favorites.js'
 
-const API = import.meta.env.VITE_API_URL ?? ''
-
-const checkJson = (r) => {
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
-  return r.json()
-}
 const range = (min, max, unit) => (min === max ? `${min} ${unit}` : `${min}-${max} ${unit}`)
-
-/* ---------- รายการโปรด (คีย์เดียวกับหน้ารายละเอียดเกม) ---------- */
-const FAV_KEY = 'bg_favorites'
-const readFavs = () => {
-  try {
-    const v = JSON.parse(localStorage.getItem(FAV_KEY) ?? '[]')
-    return Array.isArray(v) ? v : []
-  } catch {
-    return []
-  }
-}
-const writeFavs = (list) => {
-  try {
-    localStorage.setItem(FAV_KEY, JSON.stringify(list))
-  } catch {
-    /* ignore */
-  }
-}
 
 function Svg({ d, className = 'h-4 w-4', fill = 'none' }) {
   return (
@@ -88,45 +65,51 @@ function FavCard({ game, onRemove }) {
 }
 
 export default function Favorites() {
-  const [slugs, setSlugs] = useState(readFavs)
-  const [state, setState] = useState({ status: 'loading', games: [] })
+  const [state, setState] = useState({ status: isLoggedIn() ? 'loading' : 'guest', games: [] })
 
   useEffect(() => {
     document.title = 'รายการโปรด | BoardGame Catalog'
-    const ctrl = new AbortController()
-    fetch(`${API}/api/games`, { signal: ctrl.signal })
-      .then(checkJson)
-      .then((games) => setState({ status: 'ready', games }))
-      .catch((err) => {
-        if (err.name !== 'AbortError') setState({ status: 'error', games: [] })
-      })
-    return () => ctrl.abort()
+    let alive = true
+
+    const load = () => {
+      if (!isLoggedIn()) {
+        setState({ status: 'guest', games: [] })
+        return
+      }
+      setState((s) => ({ ...s, status: 'loading' }))
+      fetchFavorites()
+        .then((games) => alive && setState({ status: 'ready', games }))
+        .catch((err) => alive && setState({ status: err.message === 'unauthorized' ? 'guest' : 'error', games: [] }))
+    }
+
+    load()
+    window.addEventListener('auth-change', load) // ล็อกอิน/ออกจากระบบแล้วโหลดใหม่
+    return () => {
+      alive = false
+      window.removeEventListener('auth-change', load)
+    }
   }, [])
 
-  // ซิงก์กับแท็บอื่นที่เปิดอยู่
-  useEffect(() => {
-    const sync = () => setSlugs(readFavs())
-    window.addEventListener('storage', sync)
-    return () => window.removeEventListener('storage', sync)
-  }, [])
-
-  const remove = (slug) => {
-    const next = slugs.filter((s) => s !== slug)
-    setSlugs(next)
-    writeFavs(next)
+  const remove = async (slug) => {
+    try {
+      await removeFavorite(slug)
+      setState((s) => ({ ...s, games: s.games.filter((g) => g.slug !== slug) }))
+    } catch {
+      alert('ลบไม่สำเร็จ ลองใหม่อีกครั้ง')
+    }
   }
 
-  const clearAll = () => {
+  const clearAll = async () => {
     if (!window.confirm('ลบเกมทั้งหมดออกจากรายการโปรด?')) return
-    setSlugs([])
-    writeFavs([])
+    try {
+      await Promise.all(state.games.map((g) => removeFavorite(g.slug)))
+      setState((s) => ({ ...s, games: [] }))
+    } catch {
+      alert('ลบไม่สำเร็จ ลองใหม่อีกครั้ง')
+    }
   }
 
-  // เกมที่เพิ่งเพิ่มล่าสุดอยู่ก่อน
-  const items = [...slugs]
-    .reverse()
-    .map((s) => state.games.find((g) => g.slug === s))
-    .filter(Boolean)
+  const items = state.games // backend เรียงเกมที่เพิ่มล่าสุดไว้ก่อนให้แล้ว
 
   return (
     <div className="mx-auto max-w-7xl px-6 pb-16 pt-8">
@@ -150,7 +133,18 @@ export default function Favorites() {
       </header>
 
       <div className="mt-7">
-        {state.status === 'loading' ? (
+        {state.status === 'guest' ? (
+          <div className="rounded-3xl bg-white p-12 text-center shadow-sm ring-1 ring-slate-100">
+            <p className="text-lg font-semibold text-navy">กรุณาเข้าสู่ระบบก่อน</p>
+            <p className="mt-2 text-slate-500">ต้องเข้าสู่ระบบเพื่อเก็บและดูรายการโปรดของคุณ</p>
+            <Link
+              to="/login"
+              className="mt-6 inline-block rounded-full bg-brand px-6 py-2.5 font-bold text-white hover:bg-brand-dark"
+            >
+              เข้าสู่ระบบ
+            </Link>
+          </div>
+        ) : state.status === 'loading' ? (
           <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4" aria-hidden="true">
             {Array.from({ length: 4 }).map((_, i) => (
               <li key={i} className="h-80 animate-pulse rounded-3xl bg-slate-200/70" />

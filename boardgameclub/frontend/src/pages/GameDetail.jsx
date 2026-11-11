@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import Cover from '../components/Cover.jsx'
+import { addFavorite, fetchFavorites, isLoggedIn, removeFavorite } from '../favorites.js'
 
 const API = import.meta.env.VITE_API_URL ?? ''
 
@@ -26,31 +27,47 @@ const checkJson = (r) => {
 }
 const range = (min, max, unit) => (min === max ? `${min} ${unit}` : `${min}-${max} ${unit}`)
 
-/* ---------- รายการโปรด (เก็บในเบราว์เซอร์ก่อน ยังไม่มีระบบล็อกอิน) ---------- */
-const FAV_KEY = 'bg_favorites'
-const readFavs = () => {
-  try {
-    const v = JSON.parse(localStorage.getItem(FAV_KEY) ?? '[]')
-    return Array.isArray(v) ? v : []
-  } catch {
-    return []
-  }
-}
+/* ---------- รายการโปรด (เก็บที่ backend ผูกกับบัญชี ต้องล็อกอิน) ---------- */
 function useFavorite(slug) {
-  const [favs, setFavs] = useState(readFavs)
+  const navigate = useNavigate()
+  const [isFav, setIsFav] = useState(false)
+
   useEffect(() => {
-    const sync = () => setFavs(readFavs())
-    window.addEventListener('storage', sync)
-    return () => window.removeEventListener('storage', sync)
-  }, [])
-  const isFav = favs.includes(slug)
-  const toggle = () => {
-    const next = isFav ? favs.filter((s) => s !== slug) : [...favs, slug]
-    setFavs(next)
+    let alive = true
+    const load = () => {
+      if (!isLoggedIn()) {
+        setIsFav(false)
+        return
+      }
+      fetchFavorites()
+        .then((list) => alive && setIsFav(list.some((g) => g.slug === slug)))
+        .catch(() => alive && setIsFav(false))
+    }
+    load()
+    window.addEventListener('auth-change', load) // ล็อกอิน/ออกจากระบบแล้วอัปเดตหัวใจ
+    return () => {
+      alive = false
+      window.removeEventListener('auth-change', load)
+    }
+  }, [slug])
+
+  const toggle = async () => {
+    if (!isLoggedIn()) {
+      alert('กรุณาเข้าสู่ระบบก่อน')
+      navigate('/login')
+      return
+    }
     try {
-      localStorage.setItem(FAV_KEY, JSON.stringify(next))
-    } catch {
-      /* ignore */
+      if (isFav) await removeFavorite(slug)
+      else await addFavorite(slug)
+      setIsFav(!isFav)
+    } catch (err) {
+      if (err.message === 'unauthorized') {
+        alert('กรุณาเข้าสู่ระบบก่อน')
+        navigate('/login')
+      } else {
+        alert('ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง')
+      }
     }
   }
   return [isFav, toggle]

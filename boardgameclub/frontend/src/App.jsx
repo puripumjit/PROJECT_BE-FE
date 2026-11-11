@@ -8,7 +8,7 @@ import Favorites from './pages/Favorites.jsx'
 import About from './pages/About.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
-
+import Admin from './pages/Admin.jsx'
 function Layout() {
   return (
     <div className=" bg-[#fdf8f1]">
@@ -33,6 +33,7 @@ export default function App() {
         <Route path="about" element={<About />} />
          <Route path="login" element={<Login />} />        {/* แก้ */}
         <Route path="register" element={<Register />} />  {/* แก้ */}
+        <Route path="/admin" element={<Admin />} />
         <Route path="*" element={<Placeholder title="ไม่พบหน้านี้" />} />
       </Route>
     </Routes>

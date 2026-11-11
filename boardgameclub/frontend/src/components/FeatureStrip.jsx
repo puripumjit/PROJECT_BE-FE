@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
 
 const features = [
-  { to: '/games', icon: '🎲', iconBg: 'bg-orange-100', title: 'เกมทั้งหมด', desc: '100 เกม' },
-  { to: '/games?sort=popular', icon: '⭐', iconBg: 'bg-yellow-100', title: 'เกมยอดนิยม', desc: 'ดูเกมที่ได้รับความนิยม' },
-  { to: '/games?sort=recommended', icon: '👥', iconBg: 'bg-blue-100', title: 'แนะนำสำหรับคุณ', desc: 'เลือกเกมที่เหมาะกับสไตล์ของคุณ' },
-  { to: '/games?saved=1', icon: '❤️', iconBg: 'bg-rose-100', title: 'รายการโปรด', desc: 'เกมที่คุณชอบ' },
-]
+  { to: '/games', icon: '/icons/jigsaw.png', iconBg: 'bg-orange-100', title: 'เกมทั้งหมด', desc: '100 เกม' },
+  { to: '/games?sort=popular', icon: '/icons/star.png', iconBg: 'bg-yellow-100', title: 'เกมยอดนิยม', desc: 'ดูเกมที่ได้รับความนิยม' },
+  { to: '/games?sort=recommended', icon: '/icons/people.png', iconBg: 'bg-blue-100', title: 'แนะนำสำหรับคุณ', desc: 'เลือกเกมที่เหมาะกับสไตล์ของคุณ' },
+  { to: '/games?saved=1', icon: '/icons/lover.png', iconBg: 'bg-rose-100', title: 'รายการโปรด', desc: 'เกมที่คุณชอบ' },
+] 
 
 export default function FeatureStrip() {
   return (
@@ -14,8 +14,8 @@ export default function FeatureStrip() {
         {features.map((f) => (
           <li key={f.title} className="lg:px-6 lg:first:pl-0">
             <Link to={f.to} className="group flex items-center gap-4 rounded-xl p-2 transition hover:bg-white">
-              <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-full text-2xl ${f.iconBg}`}>
-                {f.icon}
+              <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-full ${f.iconBg}`}>
+                <img src={f.icon} alt="" className="h-8 w-8 object-contain" />
               </span>
               <span>
                 <span className="block font-semibold text-navy">{f.title}</span>

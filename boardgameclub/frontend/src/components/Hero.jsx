@@ -24,15 +24,15 @@ export default function Hero() {
           </p>
 
           <form onSubmit={onSubmit} role="search"
-                className="mt-8 flex max-w-md items-center rounded-full bg-white p-1.5 pl-5 text-slate-500 shadow-lg">
+            className="mt-8 flex max-w-md items-center rounded-full bg-white p-1.5 pl-5 text-slate-500 shadow-lg">
             <label htmlFor="hero-search" className="sr-only">ค้นหาบอร์ดเกม</label>
             <input id="hero-search" type="search" value={q} onChange={(e) => setQ(e.target.value)}
-                   placeholder="ค้นหาชื่อเกม, หมวดหมู่ หรือคำสำคัญ..."
-                   className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400" />
+              placeholder="ค้นหาชื่อเกม, หมวดหมู่ หรือคำสำคัญ..."
+              className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400" />
             <button type="submit" aria-label="ค้นหา"
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-dark">
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-dark">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"
-                   strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+                strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" />
               </svg>
             </button>
@@ -41,12 +41,12 @@ export default function Hero() {
 
         {/* ที่ใส่ภาพ: ถ้ามีรูปจริง วางไว้ที่ public/hero.png แล้วแทนที่ div นี้ด้วย
             <img src="/hero.png" alt="" className="w-full" /> */}
-        <div className="relative mx-auto hidden h-72 w-full max-w-md md:block" aria-hidden="true">
-          <div className="absolute inset-x-4 bottom-0 h-40 rotate-[-6deg] rounded-3xl bg-gradient-to-br from-green-300 to-yellow-300 shadow-2xl" />
-          <span className="absolute left-2 top-4 text-7xl">🎲</span>
-          <span className="absolute right-6 top-0 text-8xl">🏰</span>
-          <span className="absolute bottom-10 left-16 text-7xl">♟️</span>
-          <span className="absolute bottom-6 right-20 text-7xl">🃏</span>
+        <div className="mx-auto hidden w-full max-w-lg md:block">
+          <img
+            src="/hero.png"
+            alt="บอร์ดเกมแฟนตาซีพร้อมปราสาทและลูกเต๋า"
+            className="w-full drop-shadow-2xl"
+          />
         </div>
       </div>
     </section>

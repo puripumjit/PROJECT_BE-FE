@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 
 const links = [
@@ -8,54 +8,122 @@ const links = [
   { label: 'เกี่ยวกับเรา', to: '/about' },
 ]
 
-function SearchForm({ id }) {
-  const navigate = useNavigate()
-  const [q, setQ] = useState('')
+/* ---------- สถานะล็อกอิน (Login.jsx เก็บ token + user ไว้ใน storage) ---------- */
+function readUser() {
+  try {
+    const token = localStorage.getItem('token') ?? sessionStorage.getItem('token')
+    const raw = localStorage.getItem('user') ?? sessionStorage.getItem('user')
+    return token && raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
 
-  const onSubmit = (e) => {
-    e.preventDefault()
-    navigate(`/games?q=${encodeURIComponent(q.trim())}`)
+function useAuth() {
+  const navigate = useNavigate()
+  const [user, setUser] = useState(readUser)
+
+  useEffect(() => {
+    const sync = () => setUser(readUser())
+    window.addEventListener('auth-change', sync) // ล็อกอิน/ออกในแท็บนี้
+    window.addEventListener('storage', sync) // ล็อกอิน/ออกจากแท็บอื่น
+    return () => {
+      window.removeEventListener('auth-change', sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+
+  const logout = () => {
+    ;['token', 'user'].forEach((k) => {
+      localStorage.removeItem(k)
+      sessionStorage.removeItem(k)
+    })
+    window.dispatchEvent(new Event('auth-change'))
+    navigate('/')
   }
 
+  return { user, logout }
+}
+
+function UserMenu({ user, logout }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const name = user.display_name || user.username
+
+  // ปิดเมนูเมื่อคลิกข้างนอก หรือกด Esc
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false)
+    const onKey = (e) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const item = { display: 'block', width: '100%', boxSizing: 'border-box', padding: '10px 16px', textAlign: 'left', border: 0, background: 'transparent', fontSize: 14, fontWeight: 600, color: '#0f1f4b', textDecoration: 'none', cursor: 'pointer' }
+
   return (
-    <form onSubmit={onSubmit} role="search"
-          className="flex w-full items-center rounded-full bg-white p-1 pl-4 text-slate-500">
-      <label htmlFor={id} className="sr-only">ค้นหาชื่อเกม</label>
-      <input id={id} type="search" value={q} onChange={(e) => setQ(e.target.value)}
-             placeholder="ค้นหาชื่อเกม..."
-             className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400" />
-      <button type="submit" aria-label="ค้นหา"
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand text-white transition hover:bg-brand-dark">
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor"
-             strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" />
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-label={`เมนูของ ${name}`}
+        aria-expanded={open}
+        className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 text-sm font-semibold transition hover:bg-white/10"
+        style={{ border: 0, background: 'transparent', color: '#fff', cursor: 'pointer' }}
+      >
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-brand text-base font-extrabold text-white" aria-hidden="true">
+          {name.charAt(0).toUpperCase()}
+        </span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+          <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-    </form>
+
+      {open && (
+        <div role="menu" style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 50, width: 230, overflow: 'hidden', borderRadius: 14, background: '#fff', boxShadow: '0 12px 30px rgba(15,31,75,.3)' }}>
+          <div style={{ padding: '14px 16px', background: '#fff8f0', borderBottom: '1px solid #f1e6d8' }}>
+            <p style={{ margin: 0, fontWeight: 800, color: '#0f1f4b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
+            {user.email && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>}
+          </div>
+
+          {user.role === 'admin' && (
+            <Link to="/admin" role="menuitem" onClick={() => setOpen(false)} style={item}>
+              จัดการเกม
+            </Link>
+          )}
+
+          <Link to="/favorites" role="menuitem" onClick={() => setOpen(false)} style={item}>
+            รายการโปรดของฉัน
+          </Link>
+          <button type="button" role="menuitem" onClick={() => { setOpen(false); logout() }} style={{ ...item, color: '#dc2626', borderTop: '1px solid #f1f5f9' }}>
+            ออกจากระบบ
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
 function Logo() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-11 w-11" aria-hidden="true">
-      <rect x="4" y="4" width="40" height="40" rx="10" fill="#f7931e" />
-      <rect x="11" y="11" width="26" height="26" rx="6" fill="#fff" />
-      {[[18, 18], [30, 18], [24, 24], [18, 30], [30, 30]].map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="3" fill="#11224f" />
-      ))}
-    </svg>
-  )
+  return <img src="/logo.png" alt="" className="h-11 w-11 object-contain" />
 }
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
+  const { user, logout } = useAuth()
 
   return (
     <header className="bg-navy text-white">
       <nav className="mx-auto flex max-w-7xl items-center gap-6 px-6 py-4" aria-label="เมนูหลัก">
         <Link to="/" className="flex shrink-0 items-center gap-3">
           <Logo />
-          <span className="text-lg font-bold leading-tight">BoardGame<br />Catalog</span>
+          <span className="text-lg font-bold leading-tight">BoardGame<br />Club</span>
         </Link>
 
         <ul className="ml-4 hidden items-center gap-8 lg:flex">
@@ -63,8 +131,7 @@ export default function Navbar() {
             <li key={l.to}>
               <NavLink to={l.to} end={l.to === '/'}
                 className={({ isActive }) =>
-                  `block border-b-2 py-2 text-sm font-medium transition hover:text-white ${
-                    isActive ? 'border-white text-white' : 'border-transparent text-white/80'
+                  `block border-b-2 py-2 text-sm font-medium transition hover:text-white ${isActive ? 'border-white text-white' : 'border-transparent text-white/80'
                   }`}>
                 {l.label}
               </NavLink>
@@ -72,26 +139,30 @@ export default function Navbar() {
           ))}
         </ul>
 
-        <div className="ml-auto hidden w-64 md:block">
-          <SearchForm id="nav-search" />
-        </div>
-
-        <div className="hidden items-center gap-3 md:flex">
-          <Link to="/login"
+        <div className="ml-auto hidden items-center gap-3 md:flex">
+          {user ? (
+            <>
+              <UserMenu user={user} logout={logout} />
+            </>
+          ) : (
+            <>
+              <Link to="/login"
                 className="rounded-full border border-white/50 px-4 py-2 text-sm font-medium transition hover:bg-white/10">
-            เข้าสู่ระบบ
-          </Link>
-          <Link to="/register"
+                เข้าสู่ระบบ
+              </Link>
+              <Link to="/register"
                 className="rounded-full bg-brand px-4 py-2 text-sm font-semibold transition hover:bg-brand-dark">
-            สมัครสมาชิก
-          </Link>
+                สมัครสมาชิก
+              </Link>
+            </>
+          )}
         </div>
 
         <button type="button" aria-label="เปิดเมนู" aria-expanded={open} aria-controls="mobile-menu"
-                onClick={() => setOpen((v) => !v)}
-                className="ml-auto grid h-10 w-10 place-items-center rounded-lg hover:bg-white/10 md:hidden">
+          onClick={() => setOpen((v) => !v)}
+          className="ml-auto grid h-10 w-10 place-items-center rounded-lg hover:bg-white/10 md:hidden">
           <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor"
-               strokeWidth="2" strokeLinecap="round">
+            strokeWidth="2" strokeLinecap="round">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </button>
@@ -99,25 +170,30 @@ export default function Navbar() {
 
       {open && (
         <div id="mobile-menu" className="space-y-3 border-t border-white/15 px-6 pb-5 pt-4 md:hidden">
-          <SearchForm id="nav-search-m" />
           <div>
             {links.map((l) => (
               <NavLink key={l.to} to={l.to} end={l.to === '/'} onClick={() => setOpen(false)}
-                       className="block rounded-lg px-3 py-2 text-white/90 hover:bg-white/10">
+                className="block rounded-lg px-3 py-2 text-white/90 hover:bg-white/10">
                 {l.label}
               </NavLink>
             ))}
           </div>
-          <div className="flex gap-3">
-            <Link to="/login" onClick={() => setOpen(false)}
-                  className="flex-1 rounded-full border border-white/50 py-2 text-center text-sm font-medium">
-              เข้าสู่ระบบ
-            </Link>
-            <Link to="/register" onClick={() => setOpen(false)}
-                  className="flex-1 rounded-full bg-brand py-2 text-center text-sm font-semibold">
-              สมัครสมาชิก
-            </Link>
-          </div>
+          {user ? (
+            <div className="flex justify-end">
+              <UserMenu user={user} logout={logout} />
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <Link to="/login" onClick={() => setOpen(false)}
+                className="flex-1 rounded-full border border-white/50 py-2 text-center text-sm font-medium">
+                เข้าสู่ระบบ
+              </Link>
+              <Link to="/register" onClick={() => setOpen(false)}
+                className="flex-1 rounded-full bg-brand py-2 text-center text-sm font-semibold">
+                สมัครสมาชิก
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </header>

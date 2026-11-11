@@ -440,6 +440,9 @@ func main() {
 	mux.HandleFunc("GET /api/favorites", handleFavorites)
 	mux.HandleFunc("PUT /api/favorites/{slug}", handleAddFavorite)
 	mux.HandleFunc("DELETE /api/favorites/{slug}", handleRemoveFavorite)
+	mux.HandleFunc("POST /api/admin/games", handleAdminCreateGame)
+  	mux.HandleFunc("PUT /api/admin/games/{id}", handleAdminUpdateGame)
+  	mux.HandleFunc("DELETE /api/admin/games/{id}", handleAdminDeleteGame)
 
 	addr := ":" + getenv("PORT", "8080")
 	log.Printf("listening on %s", addr)

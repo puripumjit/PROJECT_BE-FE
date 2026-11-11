@@ -1,451 +1,208 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const API = import.meta.env.VITE_API_URL ?? ''
-
-const checkJson = (r) => {
-  if (!r.ok) throw new Error(`HTTP ${r.status}`)
-  return r.json()
-}
-
 /* =====================================================================
-   ภาพประกอบทั้งหมดวาดด้วย SVG ในโค้ด (ไม่ต้องใช้ไฟล์รูป)
+   รูปทั้งหมดอยู่ที่ frontend/public/about/
+   ถ้ายังไม่มีไฟล์ จะแสดง emoji แทนชั่วคราว หน้าเว็บจะไม่พัง
    ===================================================================== */
-
-/* ---------- มีเปิล (ไล่เฉด + ไฮไลต์ให้ดูเป็นชิ้นไม้/พลาสติก) ---------- */
-const MEEPLE_PATH =
-  'M12 2a3 3 0 0 0-3 3c0 .9.4 1.7 1 2.2-2.7.6-5 1.2-8 2.3-.5.2-.5 1 0 1.2 1.6.7 2.6 1.4 3.2 2.3.6 1-.2 2.8-1.7 5.2-.4.7.1 1.8 1 1.8H9c1 0 1.7-.9 2.2-1.9.3-.6.5-.9.8-.9s.5.3.8.9c.5 1 1.2 1.9 2.2 1.9h3.5c.9 0 1.4-1.1 1-1.8-1.5-2.4-2.3-4.2-1.7-5.2.6-.9 1.6-1.6 3.2-2.3.5-.2.5-1 0-1.2-3-1.1-5.3-1.7-8-2.3.6-.5 1-1.3 1-2.2a3 3 0 0 0-3-3z'
-
-const MEEPLE_TONES = {
-  red: ['#fca5a5', '#ef4444', '#991b1b'],
-  blue: ['#93c5fd', '#3b82f6', '#1e40af'],
-  yellow: ['#fef08a', '#facc15', '#a16207'],
-  green: ['#86efac', '#22c55e', '#166534'],
+const IMG = {
+  boxes: '/about/boxes.png', // กล่อง Catan / Splendor / Ticket to Ride + ลูกเต๋า (พื้นหลังโปร่งใส)
+  vision: '/about/vision.png', // กล้องส่องทางไกล
+  mission: '/about/mission.png', // โล่
+  library: '/about/library.png', // ชั้นหนังสือ
+  review: '/about/review.png', // ดาว + ยกนิ้ว
+  tips: '/about/tips.png', // หลอดไฟ
+  community: '/about/community.png', // ฟองคำพูด
 }
 
-function Meeple({ tone = 'red', className = '', ...rest }) {
-  const id = useId().replace(/:/g, '')
-  const [light, mid, dark] = MEEPLE_TONES[tone]
-  return (
-    <svg viewBox="0 0 24 24" className={className} aria-hidden="true" {...rest}>
-      <defs>
-        <linearGradient id={`m${id}`} x1="0.1" y1="0" x2="0.9" y2="1">
-          <stop offset="0" stopColor={light} />
-          <stop offset="0.45" stopColor={mid} />
-          <stop offset="1" stopColor={dark} />
-        </linearGradient>
-        <radialGradient id={`h${id}`} cx="0.32" cy="0.22" r="0.5">
-          <stop offset="0" stopColor="#fff" stopOpacity="0.7" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <path d={MEEPLE_PATH} fill={`url(#m${id})`} stroke={dark} strokeWidth="0.35" strokeLinejoin="round" />
-      <path d={MEEPLE_PATH} fill={`url(#h${id})`} />
-    </svg>
-  )
+/* ข้อมูลติดต่อ — แก้เป็นของจริงได้ที่นี่ */
+const CONTACT = {
+  email: 'info@boardgameclub.com',
+  socials: [
+    { label: 'Facebook', href: '#', icon: 'facebook' },
+    { label: 'Discord', href: '#', icon: 'discord' },
+    { label: 'Instagram', href: '#', icon: 'instagram' },
+  ],
 }
 
-/* ---------- ลูกเต๋า 3 มิติ (มุมมองไอโซเมตริก) ---------- */
-function Dice({ className = '', ...rest }) {
-  const pip = (x, y) => <circle key={`${x}${y}`} cx={x} cy={y} r="0.085" fill="#0f1f4b" />
-  return (
-    <svg viewBox="0 0 64 64" className={className} aria-hidden="true" {...rest}>
-      {/* ด้านบน */}
-      <polygon points="32,6 56,18 32,30 8,18" fill="#ffffff" stroke="#ffffff" strokeWidth="4" strokeLinejoin="round" />
-      {/* ด้านซ้าย */}
-      <polygon points="8,18 32,30 32,58 8,46" fill="#e2e8f0" stroke="#e2e8f0" strokeWidth="4" strokeLinejoin="round" />
-      {/* ด้านขวา */}
-      <polygon points="32,30 56,18 56,46 32,58" fill="#f1f5f9" stroke="#f1f5f9" strokeWidth="4" strokeLinejoin="round" />
-      <polygon points="32,6 56,18 32,30 8,18" fill="none" stroke="#cbd5e1" strokeWidth="0.8" />
-      {/* จุดบนลูกเต๋า วางด้วย matrix ให้เอียงตามหน้า */}
-      <g transform="matrix(24 12 -24 12 32 6)">{[[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]].map(([x, y]) => pip(x, y))}</g>
-      <g transform="matrix(24 12 0 28 8 18)">{[[0.25, 0.22], [0.5, 0.5], [0.75, 0.78]].map(([x, y]) => pip(x, y))}</g>
-      <g transform="matrix(24 -12 0 28 32 30)">{[[0.28, 0.28], [0.72, 0.72]].map(([x, y]) => pip(x, y))}</g>
-    </svg>
-  )
-}
-
-/* ---------- ประกายสีส้มข้างหัวข้อ ---------- */
-function Sparkle({ className = '', style }) {
-  return (
-    <svg viewBox="0 0 40 40" className={className} style={style} fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-      <path d="M20 4v9" />
-      <path d="M6 12l8 5" />
-      <path d="M34 12l-8 5" />
-    </svg>
-  )
-}
-
-function Svg({ d, className = 'h-7 w-7' }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={d} />
-    </svg>
-  )
-}
-
-/* ---------- ภาพแบนเนอร์ด้านขวา: การ์ด ลูกเต๋า มีเปิล ---------- */
-function BannerArt({ className = '', style }) {
-  return (
-    <svg viewBox="0 0 560 260" preserveAspectRatio="xMaxYMax meet" className={className} style={style} aria-hidden="true">
-      <defs>
-        <filter id="bn-blur" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="9" />
-        </filter>
-        <linearGradient id="bn-floor" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1e3a8a" stopOpacity="0" />
-          <stop offset="1" stopColor="#0b1437" stopOpacity="0.8" />
-        </linearGradient>
-      </defs>
-
-      {/* ไฟโบเก้ด้านหลัง */}
-      <g filter="url(#bn-blur)" opacity="0.85">
-        <circle cx="90" cy="60" r="26" fill="#f59e0b" />
-        <circle cx="170" cy="30" r="20" fill="#38bdf8" />
-        <circle cx="300" cy="40" r="24" fill="#fb7185" />
-        <circle cx="430" cy="34" r="22" fill="#fbbf24" />
-        <circle cx="520" cy="80" r="30" fill="#60a5fa" />
-        <circle cx="40" cy="150" r="22" fill="#a78bfa" />
-      </g>
-      <rect x="0" y="150" width="560" height="110" fill="url(#bn-floor)" />
-
-      {/* กองการ์ด */}
-      <g transform="translate(430 150)">
-        <rect x="0" y="40" width="130" height="14" rx="3" fill="#7c2d12" />
-        <rect x="0" y="30" width="130" height="14" rx="3" fill="#b45309" />
-        <rect x="-4" y="20" width="132" height="14" rx="3" fill="#ca8a04" />
-        <rect x="4" y="10" width="130" height="14" rx="3" fill="#f8fafc" />
-        <rect x="8" y="0" width="120" height="14" rx="3" fill="#e2e8f0" />
-      </g>
-      <g transform="translate(360 168) rotate(-14)">
-        <rect width="46" height="64" rx="5" fill="#fef3c7" stroke="#f59e0b" strokeWidth="2" />
-        <circle cx="23" cy="32" r="9" fill="#ef4444" />
-      </g>
-
-      {/* ลูกเต๋า */}
-      <ellipse cx="56" cy="238" rx="38" ry="8" fill="#000" opacity="0.35" />
-      <Dice x="6" y="150" width="100" height="100" style={{ transform: 'rotate(-6deg)', transformOrigin: '56px 200px' }} />
-
-      {/* มีเปิล + เงา */}
-      <ellipse cx="190" cy="244" rx="30" ry="7" fill="#000" opacity="0.35" />
-      <ellipse cx="262" cy="248" rx="38" ry="8" fill="#000" opacity="0.35" />
-      <ellipse cx="346" cy="246" rx="32" ry="7" fill="#000" opacity="0.35" />
-      <ellipse cx="430" cy="248" rx="38" ry="8" fill="#000" opacity="0.35" />
-      <Meeple tone="red" x="158" y="168" width="68" height="78" />
-      <Meeple tone="blue" x="216" y="120" width="92" height="130" />
-      <Meeple tone="yellow" x="304" y="140" width="84" height="108" />
-      <Meeple tone="green" x="388" y="112" width="92" height="138" />
-    </svg>
-  )
-}
-
-/* ---------- ภาพ "จุดเริ่มต้น": กล่องบอร์ดเกมซ้อนกันบนโต๊ะไม้ ---------- */
-function hex(cx, cy, r) {
-  return Array.from({ length: 6 }, (_, i) => {
-    const a = (Math.PI / 3) * i + Math.PI / 6
-    return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`
-  }).join(' ')
-}
-
-function BoxesScene({ className = '' }) {
-  const catanTiles = [
-    [304, '#16a34a'], [326, '#eab308'], [348, '#78716c'], [370, '#f97316'], [392, '#fde68a'],
-  ]
-  return (
-    <svg viewBox="0 0 480 330" className={className} role="img" aria-label="กล่องบอร์ดเกม Catan, Splendor และ Ticket to Ride วางซ้อนกัน">
-      <defs>
-        <linearGradient id="bx-bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#fde9c4" />
-          <stop offset="0.6" stopColor="#f6c98a" />
-          <stop offset="1" stopColor="#e7a867" />
-        </linearGradient>
-        <linearGradient id="bx-table" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#c08457" />
-          <stop offset="1" stopColor="#7c4a26" />
-        </linearGradient>
-        <linearGradient id="bx-catan" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#fb923c" />
-          <stop offset="1" stopColor="#991b1b" />
-        </linearGradient>
-        <linearGradient id="bx-splendor" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#0f172a" />
-          <stop offset="1" stopColor="#4338ca" />
-        </linearGradient>
-        <linearGradient id="bx-ticket" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#b45309" />
-          <stop offset="1" stopColor="#713f12" />
-        </linearGradient>
-        <filter id="bx-blur" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="7" />
-        </filter>
-        <filter id="bx-shadow" x="-10%" y="-20%" width="120%" height="160%">
-          <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#000" floodOpacity="0.35" />
-        </filter>
-      </defs>
-
-      <rect width="480" height="330" fill="url(#bx-bg)" />
-
-      {/* ชั้นวางและไฟโบเก้ด้านหลัง */}
-      <g filter="url(#bx-blur)" opacity="0.8">
-        <circle cx="70" cy="50" r="22" fill="#fff7d6" />
-        <circle cx="140" cy="28" r="14" fill="#ffe08a" />
-        <circle cx="430" cy="40" r="26" fill="#fff0c2" />
-        <circle cx="380" cy="20" r="12" fill="#fde68a" />
-      </g>
-      <rect x="0" y="118" width="480" height="5" fill="#a16207" opacity="0.25" />
-
-      {/* ต้นไม้ในกระถาง */}
-      <g>
-        <path d="M44 150c-18-20-20-44-6-62 8 18 12 38 6 62z" fill="#15803d" />
-        <path d="M44 150c4-26 16-44 34-54-2 22-14 42-34 54z" fill="#22c55e" />
-        <path d="M44 150c-8-22-28-34-44-34 6 20 22 32 44 34z" fill="#166534" />
-        <path d="M30 150h28l-4 30H34z" fill="#e2e8f0" />
-      </g>
-
-      {/* โต๊ะไม้ */}
-      <rect x="0" y="262" width="480" height="68" fill="url(#bx-table)" />
-      <g stroke="#5b3318" strokeWidth="1" opacity="0.35">
-        <path d="M0 282h480M0 302h480" />
-      </g>
-
-      {/* กล่อง: Ticket to Ride (ล่างสุด) */}
-      <g transform="rotate(-1.5 250 230)" filter="url(#bx-shadow)">
-        <rect x="70" y="204" width="330" height="62" rx="5" fill="#451a03" />
-        <rect x="70" y="190" width="330" height="62" rx="6" fill="url(#bx-ticket)" />
-        <rect x="76" y="196" width="318" height="50" rx="3" fill="none" stroke="#fde68a" strokeWidth="1.5" opacity="0.8" />
-        <text x="96" y="228" fontFamily="Georgia, 'Times New Roman', serif" fontWeight="800" fontSize="23" letterSpacing="2" fill="#fef3c7">
-          TICKET TO RIDE
-        </text>
-        <path d="M300 238h84" stroke="#fde68a" strokeWidth="2.5" strokeDasharray="8 4" />
-        <rect x="346" y="206" width="38" height="16" rx="3" fill="#ef4444" />
-        <rect x="350" y="209" width="6" height="6" fill="#fef3c7" />
-        <rect x="360" y="209" width="6" height="6" fill="#fef3c7" />
-        <rect x="370" y="209" width="6" height="6" fill="#fef3c7" />
-      </g>
-
-      {/* กล่อง: Splendor */}
-      <g transform="rotate(1 240 170)" filter="url(#bx-shadow)">
-        <rect x="104" y="148" width="300" height="56" rx="5" fill="#0b1226" />
-        <rect x="100" y="136" width="300" height="56" rx="6" fill="url(#bx-splendor)" />
-        <text x="122" y="174" fontFamily="Georgia, 'Times New Roman', serif" fontWeight="700" fontSize="32" fill="#fcd34d">
-          Splendor
-        </text>
-        {[
-          [300, 164, '#ef4444'], [326, 154, '#22c55e'], [352, 164, '#3b82f6'], [378, 154, '#f8fafc'],
-        ].map(([x, y, c]) => (
-          <polygon key={x} points={`${x},${y - 14} ${x + 12},${y} ${x},${y + 14} ${x - 12},${y}`} fill={c} stroke="#fff" strokeOpacity="0.6" strokeWidth="1.2" />
-        ))}
-      </g>
-
-      {/* กล่อง: CATAN (บนสุด) */}
-      <g transform="rotate(-2 260 110)" filter="url(#bx-shadow)">
-        <rect x="150" y="96" width="260" height="52" rx="5" fill="#450a0a" />
-        <rect x="146" y="82" width="260" height="52" rx="6" fill="url(#bx-catan)" />
-        <text x="164" y="120" fontFamily="Georgia, 'Times New Roman', serif" fontWeight="800" fontSize="34" letterSpacing="3" fill="#fde68a">
-          CATAN
-        </text>
-        {catanTiles.map(([x, c]) => (
-          <polygon key={x} points={hex(x, 108, 11.5)} fill={c} stroke="#fff7ed" strokeWidth="1.2" />
-        ))}
-      </g>
-
-      {/* ตัวมีเปิลและลูกเต๋าหน้าโต๊ะ */}
-      <ellipse cx="140" cy="292" rx="70" ry="9" fill="#000" opacity="0.22" />
-      <Meeple tone="blue" x="76" y="244" width="30" height="40" />
-      <Meeple tone="red" x="108" y="250" width="26" height="34" />
-      <Dice x="132" y="244" width="46" height="46" />
-      <Meeple tone="green" x="176" y="246" width="28" height="38" />
-      <Meeple tone="yellow" x="330" y="252" width="26" height="34" />
-      <Meeple tone="red" x="358" y="246" width="30" height="40" />
-      <Dice x="388" y="252" width="40" height="40" />
-    </svg>
-  )
-}
-
-const NAVY_GRAD = 'linear-gradient(90deg,#0b1437 0%,#14275f 55%,#1d3a8a 100%)'
-
-/* ---------- ข้อมูลหน้าเว็บ ---------- */
-const ICON = {
-  search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
-  star: 'M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z',
-  grid: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
-  users: 'M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM21 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
-}
+const NAVY_GRAD = 'linear-gradient(100deg,#0b1437 0%,#14275f 60%,#1d3a8a 100%)'
 
 const FEATURES = [
-  {
-    icon: ICON.search,
-    title: 'ค้นหาเกมได้ง่าย',
-    text: 'ค้นหาบอร์ดเกมที่ใช่ได้ในไม่กี่คลิก',
-    tone: 'bg-sky-100 text-sky-600',
-  },
-  {
-    icon: ICON.star,
-    title: 'เลือกเกมที่เหมาะกับคุณ',
-    text: 'ด้วยหมวดหมู่ที่หลากหลาย',
-    tone: 'bg-amber-100 text-amber-500',
-  },
-  {
-    icon: ICON.users,
-    title: 'แบ่งปันประสบการณ์',
-    text: 'พูดคุย แลกเปลี่ยนความคิดเห็นกับชุมชนคนรักบอร์ดเกม',
-    tone: 'bg-blue-100 text-blue-600',
-  },
+  { img: IMG.library, emoji: '📚', title: 'คลังข้อมูลครบถ้วน', text: 'รวบรวมข้อมูลบอร์ดเกมไว้ในที่เดียว ค้นหาง่าย ดูได้ทันที' },
+  { img: IMG.review, emoji: '👍', title: 'รีวิวตรงไปตรงมา', text: 'ข้อมูลและความเห็นที่เป็นกลาง ช่วยให้ตัดสินใจได้ง่ายขึ้น' },
+  { img: IMG.tips, emoji: '💡', title: 'คำแนะนำที่ใช่', text: 'แนะนำเกมให้เหมาะกับจำนวนผู้เล่น เวลา และอายุ' },
+  { img: IMG.community, emoji: '💬', title: 'สังคมแบ่งปัน', text: 'พูดคุยแลกเปลี่ยนกับคนรักบอร์ดเกมเหมือนกัน' },
 ]
 
-function StatItem({ icon, value, label }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '20px 16px', position: 'relative', zIndex: 1 }}>
-      <span style={{ color: '#fff', display: 'inline-flex' }}>{icon}</span>
-      <div>
-        <p style={{ margin: 0, fontSize: 36, lineHeight: 1, fontWeight: 800, color: '#fbbf24' }}>{value}</p>
-        <p style={{ margin: '4px 0 0', fontSize: 14, color: 'rgba(255,255,255,.85)' }}>{label}</p>
+const VISION_MISSION = [
+  { img: IMG.vision, emoji: '🔭', title: 'วิสัยทัศน์ของเรา', text: 'เราตั้งใจเป็นคลังข้อมูลบอร์ดเกมอันดับ 1 ที่คนรักบอร์ดเกมเข้าถึงได้ง่ายที่สุด' },
+  { img: IMG.mission, emoji: '🛡️', title: 'ภารกิจของเรา', text: 'เพื่อให้ชุมชนคนรักบอร์ดเกมเข้าถึงข้อมูลที่มีคุณภาพ ทันสมัย และแบ่งปันประสบการณ์ร่วมกัน' },
+]
+
+/* รูปที่มี fallback ถ้าไฟล์ยังไม่มี */
+function Pic({ src, alt = '', fallback, className = '' }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <div className={`grid place-items-center bg-slate-100 text-4xl ${className}`} aria-hidden="true">
+        {fallback}
       </div>
+    )
+  }
+  return <img src={src} alt={alt} onError={() => setFailed(true)} className={className} />
+}
+
+/* หัวข้อ + เส้นสีส้มใต้หัวข้อ */
+function Heading({ children, center = false }) {
+  return (
+    <div className={center ? 'text-center' : ''}>
+      <h2 className="text-2xl font-extrabold text-navy md:text-3xl">{children}</h2>
+      <span className={`mt-2 block h-1 w-14 rounded-full bg-brand ${center ? 'mx-auto' : ''}`} aria-hidden="true" />
     </div>
   )
 }
 
-export default function About() {
-  // ตัวเลขเกมและหมวดหมู่ดึงจากข้อมูลจริง ถ้าโหลดไม่ได้จะใช้ค่าเริ่มต้นไปก่อน
-  const [stats, setStats] = useState({ games: 100, categories: 10 })
+function SocialIcon({ name }) {
+  const common = { viewBox: '0 0 24 24', className: 'h-6 w-6', 'aria-hidden': true }
+  if (name === 'facebook') {
+    return (
+      <svg {...common} fill="currentColor">
+        <path d="M14 8h3V4h-3a4 4 0 0 0-4 4v2H7v4h3v8h4v-8h3l1-4h-4V8z" />
+      </svg>
+    )
+  }
+  if (name === 'instagram') {
+    return (
+      <svg {...common} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <path d="M17.5 6.5h.01" />
+      </svg>
+    )
+  }
+  // discord
+  return (
+    <svg {...common} fill="currentColor">
+      <path d="M20.317 4.37a19.8 19.8 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+    </svg>
+  )
+}
 
+export default function About() {
   useEffect(() => {
     document.title = 'เกี่ยวกับเรา | BoardGame Catalog'
-    const ctrl = new AbortController()
-    Promise.all([
-      fetch(`${API}/api/games`, { signal: ctrl.signal }).then(checkJson),
-      fetch(`${API}/api/categories`, { signal: ctrl.signal }).then(checkJson),
-    ])
-      .then(([games, categories]) => {
-        if (!Array.isArray(games) || games.length === 0) return
-        setStats({ games: games.length, categories: categories.length })
-      })
-      .catch(() => {})
-    return () => ctrl.abort()
   }, [])
 
   return (
     <div className="bg-[#fff8f0]">
-      <div className="mx-auto max-w-6xl space-y-6 px-6 pb-16 pt-6">
-        {/* แบนเนอร์หัวเรื่อง */}
-        <div
-          style={{
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: 24,
-            padding: '48px 56px',
-            minHeight: 230,
-            background: NAVY_GRAD,
-            boxShadow: '0 10px 25px rgba(15,31,75,.25)',
-          }}
-        >
-          <div style={{ position: 'absolute', right: -40, top: -90, width: 320, height: 320, borderRadius: '50%', background: 'rgba(249,115,22,.28)', filter: 'blur(60px)' }} aria-hidden="true" />
-          <div style={{ position: 'absolute', left: '33%', bottom: -120, width: 280, height: 280, borderRadius: '50%', background: 'rgba(56,189,248,.2)', filter: 'blur(60px)' }} aria-hidden="true" />
+      <div className="mx-auto max-w-6xl space-y-14 px-6 pb-16 pt-6">
+        {/* ---------- แบนเนอร์ + จุดเริ่มต้น (รูปกล่องเกมลอยทับระหว่างสองส่วน) ---------- */}
+        <div className="relative">
+          <section
+            className="relative overflow-hidden rounded-3xl px-8 py-10 shadow-lg md:min-h-[240px] md:px-14 md:py-14"
+            style={{ background: NAVY_GRAD }}
+          >
+            {/* แสงตกแต่งพื้นหลัง */}
+            <div className="pointer-events-none absolute -right-10 -top-24 h-72 w-72 rounded-full bg-orange-500/25 blur-3xl" aria-hidden="true" />
+            <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-sky-400/20 blur-3xl" aria-hidden="true" />
 
-          <div style={{ position: 'relative', zIndex: 2, maxWidth: 460 }}>
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-              <h1 style={{ margin: 0, fontSize: 56, lineHeight: 1.25, fontWeight: 800, color: '#fff' }}>
-                เกี่ยวกับ<span style={{ color: '#f97316' }}>เรา</span>
+            {/* ชื่อหัวข้อกับคำบรรยายอยู่คนละบรรทัด */}
+            <div className="relative flex flex-col items-start gap-3">
+              <h1 className="relative text-5xl font-extrabold leading-tight text-white md:text-6xl">
+                เกี่ยวกับ<span className="text-brand">เรา</span>
+                <svg viewBox="0 0 40 40" className="absolute -right-10 -top-2 h-9 w-9" fill="none" stroke="#f97316" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+                  <path d="M20 4v9M6 12l8 5M34 12l-8 5" />
+                </svg>
               </h1>
-              <Sparkle style={{ position: 'absolute', right: -44, top: -8, width: 40, height: 40 }} />
-            </div>
-            <p style={{ margin: '12px 0 0', display: 'inline-block', borderBottom: '3px solid #f97316', paddingBottom: 6, fontSize: 20, fontWeight: 600, color: '#fff' }}>
-              พื้นที่สำหรับคนรักบอร์ดเกม
-            </p>
-          </div>
-
-          <BannerArt className="banner-art" style={{ position: 'absolute', right: 0, bottom: 0, height: '100%', width: 'auto', pointerEvents: 'none' }} />
-        </div>
-
-        {/* จุดเริ่มต้น */}
-        <section className="grid items-center gap-8 py-4 md:grid-cols-2 md:gap-12">
-          <div className="relative overflow-hidden rounded-3xl shadow-md ring-1 ring-black/5">
-            <BoxesScene className="block h-auto w-full" />
-          </div>
-
-          <div className="relative">
-            <h2 className="text-2xl font-extrabold text-navy md:text-3xl">
-              จุดเริ่มต้นของ <span className="text-brand">BoardGame Catalog</span>
-            </h2>
-            <span className="mt-2 block h-1 w-14 rounded-full bg-brand" aria-hidden="true" />
-            <p className="mt-5 leading-relaxed text-slate-600">
-              เราเริ่มต้นจากความรักในบอร์ดเกม และอยากให้ทุกคนได้ค้นหาเกมที่ชอบได้ง่ายขึ้น จึงเกิดเป็นเว็บไซต์ BoardGame Catalog
-              ขึ้นมา เพื่อเป็นแหล่งรวมข้อมูลบอร์ดเกมหลากหลายประเภท พร้อมรีวิวและคำแนะนำที่เข้าใจง่าย
-            </p>
-          </div>
-        </section>
-
-        {/* จุดเด่น 3 ข้อ */}
-        <ul className="grid gap-4 md:grid-cols-3">
-          {FEATURES.map((f) => (
-            <li key={f.title} className="flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
-              <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-full ${f.tone}`}>
-                <Svg d={f.icon} className="h-8 w-8" />
-              </span>
-              <div>
-                <h3 className="font-bold text-navy">{f.title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-slate-500">{f.text}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        {/* แถบตัวเลข */}
-        <div
-          aria-label="สถิติ"
-          style={{
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: 16,
-            background: NAVY_GRAD,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            boxShadow: '0 6px 16px rgba(15,31,75,.2)',
-          }}
-        >
-          <Meeple tone="blue" style={{ position: 'absolute', left: -8, top: '50%', width: 96, height: 96, transform: 'translateY(-50%)', opacity: 0.15 }} />
-          <Meeple tone="yellow" style={{ position: 'absolute', right: -8, top: '50%', width: 96, height: 96, transform: 'translateY(-50%)', opacity: 0.15 }} />
-          <StatItem icon={<Dice style={{ width: 48, height: 48 }} />} value={`${stats.games}+`} label="เกม" />
-          <StatItem icon={<Svg d={ICON.grid} className="h-10 w-10" />} value={stats.categories} label="หมวดหมู่" />
-          <StatItem icon={<Svg d={ICON.users} className="h-11 w-11" />} value="1,000+" label="ผู้เล่น" />
-        </div>
-
-        {/* เป้าหมาย */}
-        <div
-          style={{
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: 16,
-            padding: 28,
-            background: 'linear-gradient(90deg,#fef3c7 0%,#fff7ed 55%,#fffbeb 100%)',
-            border: '1px solid #fde68a',
-          }}
-        >
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', flexShrink: 0 }} aria-hidden="true">
-              <Meeple tone="blue" style={{ width: 92, height: 92, filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.25))' }} />
-              <Meeple tone="red" style={{ width: 108, height: 108, marginLeft: -16, filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.25))' }} />
-              <Meeple tone="yellow" style={{ width: 92, height: 92, marginLeft: -16, filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.25))' }} />
-              <Dice style={{ width: 56, height: 56, marginLeft: 4 }} />
-            </div>
-
-            <div style={{ flex: '1 1 280px', minWidth: 240 }}>
-              <h2 className="text-xl font-extrabold text-navy md:text-2xl" style={{ margin: 0, color: '#0f1f4b' }}>เป้าหมายของเรา</h2>
-              <span style={{ display: 'block', marginTop: 8, height: 4, width: 48, borderRadius: 4, background: '#f97316' }} aria-hidden="true" />
-              <p style={{ margin: '12px 0 0', color: '#475569' }}>
-                เรามุ่งมั่นที่จะเป็นแพลตฟอร์มที่ดีที่สุดสำหรับคนรักบอร์ดเกม ให้ทุกคนสามารถค้นหา เลือก และสนุกกับบอร์ดเกมได้อย่างเต็มที่
+              <p className="w-fit border-b-[3px] border-brand pb-1.5 text-lg font-semibold text-white md:text-xl">
+                พื้นที่สำหรับคนรักบอร์ดเกม
               </p>
             </div>
+          </section>
 
-            <Link
-              to="/categories"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexShrink: 0, padding: '14px 28px', borderRadius: 12, background: '#f97316', color: '#fff', fontWeight: 700, boxShadow: '0 4px 10px rgba(249,115,22,.4)', textDecoration: 'none' }}
-            >
-              <Svg d={ICON.search} className="h-5 w-5" />
-              เริ่มค้นหาเกม
-            </Link>
-          </div>
+          <Pic
+            src={IMG.boxes}
+            fallback="🎲"
+            alt="กล่องบอร์ดเกม Catan, Splendor และ Ticket to Ride พร้อมลูกเต๋า"
+            className="relative z-10 mx-auto mt-6 w-3/4 max-w-md drop-shadow-2xl md:absolute md:-right-2 md:-top-4 md:mt-0 md:w-[55%] md:max-w-none"
+          />
+
+          <section className="px-2 pt-8 md:min-h-[140px] md:w-1/2 md:pr-8">
+            <Heading>
+              จุดเริ่มต้นของ <span className="text-brand">BoardGame Catalog</span>
+            </Heading>
+            <p className="mt-5 max-w-lg leading-relaxed text-slate-600">
+              เราเริ่มต้นจากความรักในบอร์ดเกม และอยากให้ทุกคนค้นหาเกมที่ชอบได้ง่ายขึ้น จึงเกิดเป็นเว็บไซต์ BoardGame Catalog
+              เพื่อเป็นแหล่งรวมข้อมูลบอร์ดเกมหลากหลายประเภท พร้อมรีวิวและคำแนะนำที่เข้าใจง่าย
+            </p>
+          </section>
         </div>
+
+        {/* ---------- วิสัยทัศน์ & ภารกิจ ---------- */}
+        <section className="grid gap-5 md:grid-cols-2">
+          {VISION_MISSION.map((c) => (
+            <div key={c.title} className="flex items-center gap-5 rounded-3xl bg-orange-100/70 p-6 shadow-sm ring-1 ring-orange-200/60">
+              <Pic src={c.img} fallback={c.emoji} className="h-20 w-20 shrink-0 rounded-2xl object-contain" />
+              <div>
+                <h3 className="text-lg font-extrabold text-navy">{c.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{c.text}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* ---------- สิ่งที่เว็บนี้มอบให้ ---------- */}
+        <section>
+          <ul className="mt-8 grid grid-cols-2 gap-5 md:grid-cols-4">
+            {FEATURES.map((f) => (
+              <li key={f.title} className="rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-slate-100">
+                <Pic src={f.img} fallback={f.emoji} className="mx-auto h-24 w-24 rounded-2xl object-contain" />
+                <h3 className="mt-4 font-bold text-navy">{f.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{f.text}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* ---------- ติดต่อเรา ---------- */}
+        <section
+          className="flex flex-col items-center gap-6 rounded-3xl px-8 py-8 text-center shadow-md md:flex-row md:justify-between md:text-left"
+          style={{ background: NAVY_GRAD }}
+        >
+          <div>
+            <h2 className="text-xl font-extrabold text-white">ติดต่อเรา</h2>
+            <a href={`mailto:${CONTACT.email}`} className="mt-2 flex items-center justify-center gap-2 text-sm text-white/90 hover:text-white md:justify-start">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="M3 7l9 6 9-6" />
+              </svg>
+              {CONTACT.email}
+            </a>
+          </div>
+
+          <ul className="flex items-center gap-3">
+            {CONTACT.socials.map((s) => (
+              <li key={s.label}>
+                <a
+                  href={s.href}
+                  aria-label={s.label}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="grid h-11 w-11 place-items-center rounded-full text-white ring-1 ring-white/30 transition hover:bg-white/15"
+                >
+                  <SocialIcon name={s.icon} />
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <Link
+            to="/categories"
+            className="rounded-full bg-brand px-8 py-3.5 text-lg font-bold text-white shadow-lg transition hover:bg-brand-dark"
+          >
+            ค้นหาบอร์ดเกมเลย
+          </Link>
+        </section>
       </div>
     </div>
   )
