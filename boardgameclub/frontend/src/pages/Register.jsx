@@ -4,7 +4,7 @@ import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Meeple from "./Meeple";
 import "./auth.css";
 
-const API_URL = "http://localhost:8080";          // พอร์ตของ backend
+const API_URL = "https://project-be-fe-clsv.onrender.com";          // พอร์ตของ backend
 const REGISTER_PATH = "/api/register";       // path สมัครสมาชิก
 
 function PasswordField({ id, name, value, onChange, placeholder, autoComplete }) {
