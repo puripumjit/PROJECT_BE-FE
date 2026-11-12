@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-const API = import.meta.env.VITE_API_URL ?? ''
+const API = import.meta.env.VITE_API_URL ?? 'https://project-be-fe-clsv.onrender.com'
 const NAVY = '#0f1f4b'
 const ORANGE = '#f97316'
 const NAVY_GRAD = 'linear-gradient(180deg,#0b1437 0%,#14275f 100%)'

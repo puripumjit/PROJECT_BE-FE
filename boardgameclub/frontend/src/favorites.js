@@ -1,6 +1,6 @@
 // ตัวช่วยเรียกรายการโปรดผ่าน backend (ผูกกับบัญชีผู้ใช้ ต้องล็อกอิน)
 // วางไว้ที่ src/favorites.js
-const API = import.meta.env.VITE_API_URL ?? ''
+const API = import.meta.env.VITE_API_URL ?? 'https://project-be-fe-clsv.onrender.com'
 
 export const getToken = () => localStorage.getItem('token') ?? sessionStorage.getItem('token')
 export const isLoggedIn = () => !!getToken()

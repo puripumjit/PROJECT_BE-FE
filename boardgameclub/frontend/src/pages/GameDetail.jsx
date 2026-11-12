@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import Cover from '../components/Cover.jsx'
 import { addFavorite, fetchFavorites, isLoggedIn, removeFavorite } from '../favorites.js'
 
-const API = import.meta.env.VITE_API_URL ?? ''
+const API = import.meta.env.VITE_API_URL ?? 'https://project-be-fe-clsv.onrender.com'
 
 const COVERS = [
   'from-amber-400 to-orange-600',

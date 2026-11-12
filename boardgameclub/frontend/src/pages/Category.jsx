@@ -5,7 +5,7 @@ import { addFavorite, fetchFavorites, isLoggedIn, removeFavorite } from '../favo
 
 // ถ้าตั้ง proxy ใน vite.config.js ให้ปล่อยว่างไว้ (เรียก /api/... ได้เลย)
 // ถ้าไม่ใช้ proxy ให้สร้างไฟล์ .env แล้วใส่ VITE_API_URL=http://localhost:8080
-const API = import.meta.env.VITE_API_URL ?? ''
+const API = import.meta.env.VITE_API_URL ?? 'https://project-be-fe-clsv.onrender.com'
 const PAGE_SIZE = 10
 
 const PLAYER_OPTIONS = [
