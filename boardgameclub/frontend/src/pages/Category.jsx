@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Cover from '../components/Cover.jsx'
+import { addFavorite, fetchFavorites, isLoggedIn, removeFavorite } from '../favorites.js'
 
 // ถ้าตั้ง proxy ใน vite.config.js ให้ปล่อยว่างไว้ (เรียก /api/... ได้เลย)
 // ถ้าไม่ใช้ proxy ให้สร้างไฟล์ .env แล้วใส่ VITE_API_URL=http://localhost:8080
@@ -191,7 +192,7 @@ function GameCard({ game, category, tagStyle, list, saved, onSave }) {
         type="button"
         aria-label={saved ? 'เอาออกจากรายการโปรด' : 'เพิ่มในรายการโปรด'}
         aria-pressed={saved}
-        onClick={() => onSave(game.id)}
+        onClick={() => onSave(game.slug)}
         className={`absolute grid h-8 w-8 place-items-center rounded-full bg-white shadow-sm ring-1 ring-slate-100 transition hover:scale-110 ${
           saved ? 'text-rose-500' : 'text-slate-500'
         } ${list ? 'right-5 top-1/2 -translate-y-1/2' : 'bottom-4 right-5'}`}
@@ -216,6 +217,7 @@ export default function Category() {
   // รองรับ /categories, /games, /categories/:slug และ ?q=ชื่อเกม&category=slug
   const { slug } = useParams()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const urlQuery = searchParams.get('q') ?? ''
   const urlCategory = slug ?? searchParams.get('category')
 
@@ -227,7 +229,27 @@ export default function Category() {
   const [sort, setSort] = useState('recommended')
   const [view, setView] = useState('grid')
   const [page, setPage] = useState(1)
-  const [saved, setSaved] = useState(() => new Set()) // รายการโปรด (เก็บในหน้านี้ก่อน ต่อ API ภายหลังได้)
+  const [saved, setSaved] = useState(() => new Set()) // slug ของเกมที่อยู่ในรายการโปรด (ดึงจาก backend)
+
+  // โหลดรายการโปรดจาก backend (ต้องล็อกอิน) และอัปเดตเมื่อล็อกอิน/ออกจากระบบ
+  useEffect(() => {
+    let alive = true
+    const load = () => {
+      if (!isLoggedIn()) {
+        setSaved(new Set())
+        return
+      }
+      fetchFavorites()
+        .then((list) => alive && setSaved(new Set(list.map((g) => g.slug))))
+        .catch(() => alive && setSaved(new Set()))
+    }
+    load()
+    window.addEventListener('auth-change', load)
+    return () => {
+      alive = false
+      window.removeEventListener('auth-change', load)
+    }
+  }, [])
 
   // ถ้า URL เปลี่ยน ให้ตั้งตัวกรองใหม่ตาม URL
   useEffect(() => {
@@ -298,12 +320,32 @@ export default function Category() {
       [group]: f[group].includes(id) ? f[group].filter((x) => x !== id) : [...f[group], id],
     }))
 
-  const toggleSaved = (id) =>
-    setSaved((s) => {
-      const next = new Set(s)
-      next.has(id) ? next.delete(id) : next.add(id)
-      return next
-    })
+  // กดหัวใจ: ต้องล็อกอินก่อน แล้วบันทึกลง backend (เหมือนหน้า GameDetail)
+  const toggleSaved = async (gameSlug) => {
+    if (!isLoggedIn()) {
+      alert('กรุณาเข้าสู่ระบบก่อน')
+      navigate('/login')
+      return
+    }
+    const was = saved.has(gameSlug)
+    try {
+      if (was) await removeFavorite(gameSlug)
+      else await addFavorite(gameSlug)
+      setSaved((s) => {
+        const next = new Set(s)
+        if (was) next.delete(gameSlug)
+        else next.add(gameSlug)
+        return next
+      })
+    } catch (err) {
+      if (err.message === 'unauthorized') {
+        alert('กรุณาเข้าสู่ระบบก่อน')
+        navigate('/login')
+      } else {
+        alert('ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง')
+      }
+    }
+  }
 
   // ต้องเป็น true/false เสมอ (ถ้าเป็นเลข 0 React จะแสดงเลข 0 บนหน้าเว็บ)
   const hasFilter =
@@ -463,7 +505,7 @@ export default function Category() {
                   category={catBySlug[g.category]}
                   tagStyle={tagByCat[g.category]}
                   list={view === 'list'}
-                  saved={saved.has(g.id)}
+                  saved={saved.has(g.slug)}
                   onSave={toggleSaved}
                 />
               ))}

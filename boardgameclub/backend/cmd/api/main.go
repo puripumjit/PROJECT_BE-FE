@@ -137,12 +137,13 @@ type Game struct {
 	Highlights    []string `json:"highlights"`
 	Tags          []string `json:"tags"`
 	IsRecommended bool     `json:"is_recommended"`
+	CoverURL      *string  `json:"cover_url"` // ใหม่
 }
 
 const gameSelect = `
 SELECT g.id, g.slug, g.name, c.slug, g.description, g.publisher, g.designer, g.game_type,
        g.min_players, g.max_players, g.min_play_time, g.max_play_time, g.min_age,
-       g.how_to_play, g.highlights, g.tags, g.is_recommended
+       g.how_to_play, g.highlights, g.tags, g.is_recommended, g.cover_url
 FROM games g
 JOIN categories c ON c.id = g.category_id
 `
@@ -152,7 +153,7 @@ func scanGame(rows pgx.Rows) (Game, error) {
 	err := rows.Scan(
 		&g.ID, &g.Slug, &g.Name, &g.CategorySlug, &g.Description, &g.Publisher, &g.Designer, &g.GameType,
 		&g.MinPlayers, &g.MaxPlayers, &g.MinPlayTime, &g.MaxPlayTime, &g.MinAge,
-		&g.HowToPlay, &g.Highlights, &g.Tags, &g.IsRecommended,
+		&g.HowToPlay, &g.Highlights, &g.Tags, &g.IsRecommended, &g.CoverURL,
 	)
 	return g, err
 }
@@ -257,6 +258,10 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "username and password are required")
 		return
 	}
+	// กันชื่อยาวเกินคอลัมน์ในตาราง login_logs (ตัดตามจำนวนตัวอักษร ไม่ใช่ไบต์)
+	if rn := []rune(body.Username); len(rn) > 100 {
+		body.Username = string(rn[:100])
+	}
 
 	var (
 		id          int64
@@ -273,14 +278,17 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		 WHERE lower(username) = lower($1) OR lower(email) = lower($1)`,
 		body.Username).Scan(&id, &username, &email, &hash, &displayName, &role, &active)
 	if err != nil {
+		logLogin(r, nil, body.Username, false) // ไม่พบผู้ใช้
 		writeErr(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 	if !active || bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Password)) != nil {
+		logLogin(r, &id, body.Username, false) // รหัสผิดหรือบัญชีถูกปิด
 		writeErr(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
+	logLogin(r, &id, body.Username, true) // เข้าสู่ระบบสำเร็จ
 	_, _ = db.Exec(r.Context(), `UPDATE users SET last_login_at = now() WHERE id = $1`, id)
 
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -410,6 +418,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		"email":    body.Email,
 	})
 }
+
 // ---------- main ----------
 
 func main() {
@@ -441,8 +450,11 @@ func main() {
 	mux.HandleFunc("PUT /api/favorites/{slug}", handleAddFavorite)
 	mux.HandleFunc("DELETE /api/favorites/{slug}", handleRemoveFavorite)
 	mux.HandleFunc("POST /api/admin/games", handleAdminCreateGame)
-  	mux.HandleFunc("PUT /api/admin/games/{id}", handleAdminUpdateGame)
-  	mux.HandleFunc("DELETE /api/admin/games/{id}", handleAdminDeleteGame)
+	mux.HandleFunc("PUT /api/admin/games/{id}", handleAdminUpdateGame)
+	mux.HandleFunc("DELETE /api/admin/games/{id}", handleAdminDeleteGame)
+	mux.HandleFunc("POST /api/admin/upload", handleAdminUpload)  // ใหม่: อัปโหลดรูป
+	mux.Handle("GET /uploads/", uploadsHandler())                // ใหม่: เสิร์ฟรูปที่อัปโหลด
+	mux.HandleFunc("GET /api/admin/login-logs", handleLoginLogs) // ประวัติการเข้าใช้งาน (ดูอย่างเดียว)
 
 	addr := ":" + getenv("PORT", "8080")
 	log.Printf("listening on %s", addr)

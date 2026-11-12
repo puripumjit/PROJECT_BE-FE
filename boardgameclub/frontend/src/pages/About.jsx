@@ -17,12 +17,7 @@ const IMG = {
 
 /* ข้อมูลติดต่อ — แก้เป็นของจริงได้ที่นี่ */
 const CONTACT = {
-  email: 'info@boardgameclub.com',
-  socials: [
-    { label: 'Facebook', href: '#', icon: 'facebook' },
-    { label: 'Discord', href: '#', icon: 'discord' },
-    { label: 'Instagram', href: '#', icon: 'instagram' },
-  ],
+  emails: ['chuinoei_a@silpakorn.edu', 'pumjit_p@silpakorn.edu'],
 }
 
 const NAVY_GRAD = 'linear-gradient(100deg,#0b1437 0%,#14275f 60%,#1d3a8a 100%)'
@@ -59,32 +54,6 @@ function Heading({ children, center = false }) {
       <h2 className="text-2xl font-extrabold text-navy md:text-3xl">{children}</h2>
       <span className={`mt-2 block h-1 w-14 rounded-full bg-brand ${center ? 'mx-auto' : ''}`} aria-hidden="true" />
     </div>
-  )
-}
-
-function SocialIcon({ name }) {
-  const common = { viewBox: '0 0 24 24', className: 'h-6 w-6', 'aria-hidden': true }
-  if (name === 'facebook') {
-    return (
-      <svg {...common} fill="currentColor">
-        <path d="M14 8h3V4h-3a4 4 0 0 0-4 4v2H7v4h3v8h4v-8h3l1-4h-4V8z" />
-      </svg>
-    )
-  }
-  if (name === 'instagram') {
-    return (
-      <svg {...common} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="5" />
-        <circle cx="12" cy="12" r="4" />
-        <path d="M17.5 6.5h.01" />
-      </svg>
-    )
-  }
-  // discord
-  return (
-    <svg {...common} fill="currentColor">
-      <path d="M20.317 4.37a19.8 19.8 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.1.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-    </svg>
   )
 }
 
@@ -171,30 +140,20 @@ export default function About() {
         >
           <div>
             <h2 className="text-xl font-extrabold text-white">ติดต่อเรา</h2>
-            <a href={`mailto:${CONTACT.email}`} className="mt-2 flex items-center justify-center gap-2 text-sm text-white/90 hover:text-white md:justify-start">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="5" width="18" height="14" rx="2" />
-                <path d="M3 7l9 6 9-6" />
-              </svg>
-              {CONTACT.email}
-            </a>
+            <ul className="mt-2 space-y-1.5">
+              {CONTACT.emails.map((email) => (
+                <li key={email}>
+                  <a href={`mailto:${email}`} className="flex items-center justify-center gap-2 text-sm text-white/90 hover:text-white md:justify-start">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <path d="M3 7l9 6 9-6" />
+                    </svg>
+                    {email}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
-
-          <ul className="flex items-center gap-3">
-            {CONTACT.socials.map((s) => (
-              <li key={s.label}>
-                <a
-                  href={s.href}
-                  aria-label={s.label}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="grid h-11 w-11 place-items-center rounded-full text-white ring-1 ring-white/30 transition hover:bg-white/15"
-                >
-                  <SocialIcon name={s.icon} />
-                </a>
-              </li>
-            ))}
-          </ul>
 
           <Link
             to="/categories"

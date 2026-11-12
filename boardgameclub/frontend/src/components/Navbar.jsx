@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Home, LayoutGrid, Heart, Users } from 'lucide-react'
 
 const links = [
-  { label: 'หน้าแรก', to: '/' },
-  { label: 'หมวดหมู่', to: '/categories' },
-  { label: 'รายการโปรด', to: '/favorites' },
-  { label: 'เกี่ยวกับเรา', to: '/about' },
+  { label: 'หน้าแรก', to: '/', Icon: Home },
+  { label: 'หมวดหมู่', to: '/categories', Icon: LayoutGrid },
+  { label: 'รายการโปรด', to: '/favorites', Icon: Heart },
+  { label: 'เกี่ยวกับเรา', to: '/about', Icon: Users },
 ]
 
 /* ---------- สถานะล็อกอิน (Login.jsx เก็บ token + user ไว้ใน storage) ---------- */
@@ -127,13 +128,14 @@ export default function Navbar() {
         </Link>
 
         <ul className="ml-4 hidden items-center gap-8 lg:flex">
-          {links.map((l) => (
-            <li key={l.to}>
-              <NavLink to={l.to} end={l.to === '/'}
+          {links.map(({ label, to, Icon }) => (
+            <li key={to}>
+              <NavLink to={to} end={to === '/'}
                 className={({ isActive }) =>
-                  `block border-b-2 py-2 text-sm font-medium transition hover:text-white ${isActive ? 'border-white text-white' : 'border-transparent text-white/80'
+                  `flex items-center gap-2 border-b-2 py-2 text-sm font-medium transition hover:text-white ${isActive ? 'border-brand text-white' : 'border-transparent text-white/80'
                   }`}>
-                {l.label}
+                <Icon size={18} fill="currentColor" aria-hidden="true" />
+                {label}
               </NavLink>
             </li>
           ))}

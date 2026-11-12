@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-
-
 // ---------- สิทธิ์แอดมิน ----------
 
 func requireAdmin(w http.ResponseWriter, r *http.Request) bool {
@@ -46,6 +44,7 @@ type gameInput struct {
 	Highlights    []string `json:"highlights"`
 	Tags          []string `json:"tags"`
 	IsRecommended bool     `json:"is_recommended"`
+	CoverURL      string   `json:"cover_url"` // ใหม่: รูปปก (null/ว่าง = ไม่มีรูป)
 }
 
 func cleanLines(in []string) []string {
@@ -75,6 +74,20 @@ func slugify(name string) string {
 	return s
 }
 
+// รูปปกต้องเป็นไฟล์ในเว็บเรา (/uploads/..., /covers/...) หรือลิงก์ http(s) เท่านั้น
+func validCoverURL(s string) bool {
+	if s == "" {
+		return true
+	}
+	if len(s) > 500 {
+		return false
+	}
+	if strings.HasPrefix(s, "/") && !strings.HasPrefix(s, "//") {
+		return true
+	}
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
 func readGameInput(w http.ResponseWriter, r *http.Request) (gameInput, bool) {
 	var in gameInput
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
@@ -83,6 +96,7 @@ func readGameInput(w http.ResponseWriter, r *http.Request) (gameInput, bool) {
 	}
 	in.Name = strings.TrimSpace(in.Name)
 	in.Description = strings.TrimSpace(in.Description)
+	in.CoverURL = strings.TrimSpace(in.CoverURL)
 	in.HowToPlay = cleanLines(in.HowToPlay)
 	in.Highlights = cleanLines(in.Highlights)
 	in.Tags = cleanLines(in.Tags)
@@ -100,6 +114,8 @@ func readGameInput(w http.ResponseWriter, r *http.Request) (gameInput, bool) {
 		writeErr(w, http.StatusBadRequest, "เวลาเล่นไม่ถูกต้อง")
 	case in.MinAge < 0:
 		writeErr(w, http.StatusBadRequest, "อายุที่แนะนำไม่ถูกต้อง")
+	case !validCoverURL(in.CoverURL):
+		writeErr(w, http.StatusBadRequest, "ที่อยู่รูปปกไม่ถูกต้อง")
 	default:
 		return in, true
 	}
@@ -134,12 +150,12 @@ func handleAdminCreateGame(w http.ResponseWriter, r *http.Request) {
 	err := db.QueryRow(r.Context(),
 		`INSERT INTO games (slug, name, category_id, description, publisher, designer, game_type,
 		                    min_players, max_players, min_play_time, max_play_time, min_age,
-		                    how_to_play, highlights, tags, is_recommended, is_published)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,true)
+		                    how_to_play, highlights, tags, is_recommended, cover_url, is_published)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,true)
 		 RETURNING id`,
 		slug, in.Name, catID, in.Description, nullIfEmpty(in.Publisher), nullIfEmpty(in.Designer), nullIfEmpty(in.GameType),
 		in.MinPlayers, in.MaxPlayers, in.MinPlayTime, in.MaxPlayTime, in.MinAge,
-		in.HowToPlay, in.Highlights, in.Tags, in.IsRecommended).Scan(&id)
+		in.HowToPlay, in.Highlights, in.Tags, in.IsRecommended, nullIfEmpty(in.CoverURL)).Scan(&id)
 	if err != nil {
 		if strings.Contains(err.Error(), "23505") {
 			writeErr(w, http.StatusConflict, "มีเกมชื่อนี้อยู่แล้ว")
@@ -172,16 +188,17 @@ func handleAdminUpdateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// cover_url ไม่ใช้ COALESCE เพราะต้องลบรูปได้ (ส่งค่าว่าง = ลบรูป)
 	tag, err := db.Exec(r.Context(),
 		`UPDATE games SET
 		   name = $1, category_id = $2, description = $3,
 		   publisher = COALESCE($4, publisher), designer = COALESCE($5, designer), game_type = COALESCE($6, game_type),
 		   min_players = $7, max_players = $8, min_play_time = $9, max_play_time = $10, min_age = $11,
-		   how_to_play = $12, highlights = $13, tags = $14, is_recommended = $15
-		 WHERE id = $16`,
+		   how_to_play = $12, highlights = $13, tags = $14, is_recommended = $15, cover_url = $16
+		 WHERE id = $17`,
 		in.Name, catID, in.Description, nullIfEmpty(in.Publisher), nullIfEmpty(in.Designer), nullIfEmpty(in.GameType),
 		in.MinPlayers, in.MaxPlayers, in.MinPlayTime, in.MaxPlayTime, in.MinAge,
-		in.HowToPlay, in.Highlights, in.Tags, in.IsRecommended, gid)
+		in.HowToPlay, in.Highlights, in.Tags, in.IsRecommended, nullIfEmpty(in.CoverURL), gid)
 	if err != nil {
 		log.Printf("admin update game error: %v", err)
 		writeErr(w, http.StatusInternalServerError, "แก้ไขเกมไม่สำเร็จ")
@@ -234,11 +251,3 @@ func handleAdminDeleteGame(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
-/*
-เพิ่ม 3 บรรทัดนี้ใน main() ต่อจาก mux.HandleFunc("DELETE /api/favorites/{slug}", ...):
-
-	mux.HandleFunc("POST /api/admin/games", handleAdminCreateGame)
-	mux.HandleFunc("PUT /api/admin/games/{id}", handleAdminUpdateGame)
-	mux.HandleFunc("DELETE /api/admin/games/{id}", handleAdminDeleteGame)
-*/

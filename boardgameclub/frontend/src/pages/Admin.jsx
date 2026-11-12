@@ -19,6 +19,7 @@ const EMPTY = {
   highlights: '',
   tags: '',
   is_recommended: false,
+  cover_url: '', // ใหม่: รูปปกเกม
 }
 
 /* ---------- helpers ---------- */
@@ -45,6 +46,24 @@ async function api(path, { method = 'GET', body } = {}) {
   return data
 }
 
+// ใหม่: อัปโหลดรูป (ใช้ FormData ห้ามตั้ง Content-Type เอง)
+async function uploadImage(file) {
+  const { token } = getAuth()
+  const fd = new FormData()
+  fd.append('image', file)
+  const res = await fetch(`${API}/api/admin/upload`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || 'อัปโหลดรูปไม่สำเร็จ')
+  return data.url
+}
+
+// ใหม่: แปลง path รูปให้เป็น URL เต็ม
+const imgSrc = (u) => (!u ? '' : /^https?:\/\//.test(u) ? u : `${API}${u}`)
+
 const lines = (s) => s.split('\n').map((x) => x.trim()).filter(Boolean)
 const toForm = (g) => ({
   name: g.name,
@@ -59,6 +78,7 @@ const toForm = (g) => ({
   highlights: (g.highlights ?? []).join('\n'),
   tags: (g.tags ?? []).join(', '),
   is_recommended: !!g.is_recommended,
+  cover_url: g.cover_url ?? '',
 })
 const toPayload = (f) => ({
   name: f.name.trim(),
@@ -73,6 +93,7 @@ const toPayload = (f) => ({
   highlights: lines(f.highlights),
   tags: f.tags.split(',').map((x) => x.trim()).filter(Boolean),
   is_recommended: f.is_recommended,
+  cover_url: f.cover_url || null,
 })
 
 /* ---------- ส่วนประกอบฟอร์ม ---------- */
@@ -120,15 +141,36 @@ function Range({ value, onChange, unit, placeholderMin, placeholderMax, min = 1 
 function GameForm({ categories, editing, onSaved, onCancel }) {
   const [f, setF] = useState(editing ? toForm(editing) : EMPTY)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const set = (k) => (v) => setF((p) => ({ ...p, [k]: v }))
   const bind = (k) => ({ value: f[k], onChange: (e) => set(k)(e.target.value), onFocus: focus, onBlur: blur })
+
+  async function onPickImage(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setError('')
+    if (file.size > 3 * 1024 * 1024) {
+      e.target.value = ''
+      return setError('รูปต้องมีขนาดไม่เกิน 3MB')
+    }
+    setUploading(true)
+    try {
+      set('cover_url')(await uploadImage(file))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   async function submit(e) {
     e.preventDefault()
     setError('')
     if (!f.name.trim() || !f.category || !f.description.trim()) return setError('กรุณากรอกชื่อเกม หมวดหมู่ และรายละเอียดให้ครบ')
     if (!f.min_players || !f.max_players || !f.min_play_time || !f.max_play_time || f.min_age === '') return setError('กรุณากรอกจำนวนผู้เล่น เวลาเล่น และอายุให้ครบ')
+    if (uploading) return setError('กำลังอัปโหลดรูป กรุณารอสักครู่')
     setSaving(true)
     try {
       if (editing) await api(`/api/admin/games/${editing.id}`, { method: 'PUT', body: toPayload(f) })
@@ -181,6 +223,27 @@ function GameForm({ categories, editing, onSaved, onCancel }) {
         </div>
 
         <div>
+          {/* ใหม่: รูปปกเกม */}
+          <Field label="รูปปกเกม" hint="JPG, PNG, WEBP ไม่เกิน 3MB">
+            {f.cover_url && (
+              <img
+                src={imgSrc(f.cover_url)}
+                alt="ตัวอย่างรูปปก"
+                style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, marginBottom: 10, border: '1px solid #e2e8f0', display: 'block' }}
+              />
+            )}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <label style={{ padding: '10px 16px', borderRadius: 10, background: '#e0f2fe', color: '#0369a1', fontWeight: 700, cursor: uploading ? 'wait' : 'pointer' }}>
+                {uploading ? 'กำลังอัปโหลด…' : f.cover_url ? 'เปลี่ยนรูป' : 'เลือกรูป'}
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={onPickImage} disabled={uploading} style={{ display: 'none' }} />
+              </label>
+              {f.cover_url && (
+                <button type="button" onClick={() => set('cover_url')('')} style={{ padding: '10px 16px', border: 0, borderRadius: 10, background: '#fee2e2', color: '#b91c1c', fontWeight: 700, cursor: 'pointer' }}>
+                  ลบรูป
+                </button>
+              )}
+            </div>
+          </Field>
           <Field label="รายละเอียดเกม" required>
             <textarea rows={5} placeholder="อธิบายเกมและจุดเด่น..." {...bind('description')} style={{ ...inputStyle, resize: 'vertical' }} />
           </Field>
@@ -198,7 +261,7 @@ function GameForm({ categories, editing, onSaved, onCancel }) {
       </div>
 
       <div style={{ display: 'flex', gap: 14, marginTop: 28, flexWrap: 'wrap' }}>
-        <button type="submit" disabled={saving} style={{ flex: '2 1 220px', padding: '14px 20px', border: 0, borderRadius: 12, background: saving ? '#fdba74' : ORANGE, color: '#fff', fontSize: 16, fontWeight: 700, cursor: saving ? 'wait' : 'pointer', boxShadow: '0 4px 10px rgba(249,115,22,.35)' }}>
+        <button type="submit" disabled={saving || uploading} style={{ flex: '2 1 220px', padding: '14px 20px', border: 0, borderRadius: 12, background: saving || uploading ? '#fdba74' : ORANGE, color: '#fff', fontSize: 16, fontWeight: 700, cursor: saving ? 'wait' : 'pointer', boxShadow: '0 4px 10px rgba(249,115,22,.35)' }}>
           {saving ? 'กำลังบันทึก…' : 'บันทึกข้อมูล'}
         </button>
         <button type="button" onClick={onCancel} style={{ flex: '1 1 140px', padding: '14px 20px', border: 0, borderRadius: 12, background: '#eef2f7', color: NAVY, fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
@@ -225,6 +288,7 @@ function GameList({ games, categories, loading, onEdit, onDelete }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr>
+              <th style={th}>รูป</th>
               <th style={th}>ชื่อเกม</th>
               <th style={th}>หมวดหมู่</th>
               <th style={th}>ผู้เล่น</th>
@@ -236,6 +300,13 @@ function GameList({ games, categories, loading, onEdit, onDelete }) {
           <tbody>
             {shown.map((g) => (
               <tr key={g.id}>
+                <td style={td}>
+                  {g.cover_url ? (
+                    <img src={imgSrc(g.cover_url)} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
+                  ) : (
+                    <span style={{ color: '#94a3b8' }}>–</span>
+                  )}
+                </td>
                 <td style={{ ...td, fontWeight: 700 }}>{g.name}</td>
                 <td style={td}>{catName[g.category] ?? g.category}</td>
                 <td style={td}>{g.min_players === g.max_players ? g.min_players : `${g.min_players}-${g.max_players}`}</td>
@@ -253,14 +324,14 @@ function GameList({ games, categories, loading, onEdit, onDelete }) {
             ))}
             {!loading && shown.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ ...td, textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={7} style={{ ...td, textAlign: 'center', color: '#64748b' }}>
                   ไม่พบเกม
                 </td>
               </tr>
             )}
             {loading && (
               <tr>
-                <td colSpan={6} style={{ ...td, textAlign: 'center', color: '#64748b' }}>
+                <td colSpan={7} style={{ ...td, textAlign: 'center', color: '#64748b' }}>
                   กำลังโหลด…
                 </td>
               </tr>
