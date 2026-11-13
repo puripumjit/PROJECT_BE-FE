@@ -4,8 +4,8 @@ const features = [
   { to: '/games', icon: '/icons/jigsaw.png', iconBg: 'bg-orange-100', title: 'เกมทั้งหมด', desc: '100 เกม' },
   { to: '/games?sort=popular', icon: '/icons/star.png', iconBg: 'bg-yellow-100', title: 'เกมยอดนิยม', desc: 'ดูเกมที่ได้รับความนิยม' },
   { to: '/games?sort=recommended', icon: '/icons/people.png', iconBg: 'bg-blue-100', title: 'แนะนำสำหรับคุณ', desc: 'เลือกเกมที่เหมาะกับสไตล์ของคุณ' },
-  { to: '/games?saved=1', icon: '/icons/lover.png', iconBg: 'bg-rose-100', title: 'รายการโปรด', desc: 'เกมที่คุณชอบ' },
-] 
+  { to: '/favorites', icon: '/icons/lover.png', iconBg: 'bg-rose-100', title: 'รายการโปรด', desc: 'เกมที่คุณชอบ' },
+]
 
 export default function FeatureStrip() {
   return (

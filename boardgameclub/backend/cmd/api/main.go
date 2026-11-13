@@ -419,6 +419,104 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GET /api/me
+func handleMe(w http.ResponseWriter, r *http.Request) {
+	uid, _, ok := authUser(r)
+	if !ok {
+		writeErr(w, http.StatusUnauthorized, "login required")
+		return
+	}
+	var (
+		username, email, role string
+		displayName           *string
+		lastLogin             *time.Time
+	)
+	err := db.QueryRow(r.Context(),
+		`SELECT username, email, display_name, role::text, last_login_at
+		 FROM users WHERE id = $1 AND is_active`, uid).
+		Scan(&username, &email, &displayName, &role, &lastLogin)
+	if err != nil {
+		writeErr(w, http.StatusUnauthorized, "login required")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":            uid,
+		"username":      username,
+		"email":         email,
+		"display_name":  displayName,
+		"role":          role,
+		"last_login_at": lastLogin,
+	})
+}
+
+// PUT /api/me  {"display_name":"..."}
+func handleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	uid, _, ok := authUser(r)
+	if !ok {
+		writeErr(w, http.StatusUnauthorized, "login required")
+		return
+	}
+	var body struct {
+		DisplayName string `json:"display_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "ข้อมูลไม่ถูกต้อง")
+		return
+	}
+	name := strings.TrimSpace(body.DisplayName)
+	if n := len([]rune(name)); n < 3 || n > 50 {
+		writeErr(w, http.StatusBadRequest, "ชื่อที่แสดงต้องยาว 3-50 ตัวอักษร")
+		return
+	}
+	if _, err := db.Exec(r.Context(), `UPDATE users SET display_name = $1 WHERE id = $2`, name, uid); err != nil {
+		log.Printf("update me error: %v", err)
+		writeErr(w, http.StatusInternalServerError, "บันทึกไม่สำเร็จ")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"display_name": name})
+}
+
+// PUT /api/me/password  {"current_password":"...","new_password":"..."}
+func handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	uid, _, ok := authUser(r)
+	if !ok {
+		writeErr(w, http.StatusUnauthorized, "login required")
+		return
+	}
+	var body struct {
+		Current string `json:"current_password"`
+		New     string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeErr(w, http.StatusBadRequest, "ข้อมูลไม่ถูกต้อง")
+		return
+	}
+	if len(body.New) < 8 {
+		writeErr(w, http.StatusBadRequest, "รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร")
+		return
+	}
+	var hash string
+	if err := db.QueryRow(r.Context(), `SELECT password_hash FROM users WHERE id = $1`, uid).Scan(&hash); err != nil {
+		writeErr(w, http.StatusUnauthorized, "login required")
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(body.Current)) != nil {
+		writeErr(w, http.StatusBadRequest, "รหัสผ่านปัจจุบันไม่ถูกต้อง")
+		return
+	}
+	newHash, err := bcrypt.GenerateFromPassword([]byte(body.New), bcrypt.DefaultCost)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "เกิดข้อผิดพลาดภายในระบบ")
+		return
+	}
+	if _, err := db.Exec(r.Context(), `UPDATE users SET password_hash = $1 WHERE id = $2`, string(newHash), uid); err != nil {
+		log.Printf("change password error: %v", err)
+		writeErr(w, http.StatusInternalServerError, "เปลี่ยนรหัสผ่านไม่สำเร็จ")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ---------- main ----------
 
 func main() {
@@ -446,6 +544,9 @@ func main() {
 	mux.HandleFunc("GET /api/games/{slug}", handleGameDetail)
 	mux.HandleFunc("POST /api/login", handleLogin)
 	mux.HandleFunc("POST /api/register", handleRegister)
+	mux.HandleFunc("GET /api/me", handleMe)
+	mux.HandleFunc("PUT /api/me", handleUpdateMe)
+	mux.HandleFunc("PUT /api/me/password", handleChangePassword)
 	mux.HandleFunc("GET /api/favorites", handleFavorites)
 	mux.HandleFunc("PUT /api/favorites/{slug}", handleAddFavorite)
 	mux.HandleFunc("DELETE /api/favorites/{slug}", handleRemoveFavorite)

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import Cover from '../components/Cover.jsx'
 
 const API = import.meta.env.VITE_API_URL ?? 'https://project-be-fe-clsv.onrender.com'
 const NAVY = '#0f1f4b'
@@ -226,10 +227,10 @@ function GameForm({ categories, editing, onSaved, onCancel }) {
           {/* ใหม่: รูปปกเกม */}
           <Field label="รูปปกเกม" hint="JPG, PNG, WEBP ไม่เกิน 3MB">
             {f.cover_url && (
-              <img
-                src={imgSrc(f.cover_url)}
-                alt="ตัวอย่างรูปปก"
-                style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, marginBottom: 10, border: '1px solid #e2e8f0', display: 'block' }}
+              <Cover
+                game={{ ...(editing ?? {}), name: f.name || 'เกม', slug: editing?.slug, cover_url: f.cover_url }}
+                className="mb-2.5 h-56 w-full"
+                showBadge={false}
               />
             )}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -301,11 +302,7 @@ function GameList({ games, categories, loading, onEdit, onDelete }) {
             {shown.map((g) => (
               <tr key={g.id}>
                 <td style={td}>
-                  {g.cover_url ? (
-                    <img src={imgSrc(g.cover_url)} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 8, display: 'block' }} />
-                  ) : (
-                    <span style={{ color: '#94a3b8' }}>–</span>
-                  )}
+                  <Cover game={g} className="h-11 w-11" showBadge={false} />
                 </td>
                 <td style={{ ...td, fontWeight: 700 }}>{g.name}</td>
                 <td style={td}>{catName[g.category] ?? g.category}</td>

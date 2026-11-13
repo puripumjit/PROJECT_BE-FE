@@ -180,19 +180,11 @@ export default function Login() {
 
           <div style={{ position: 'relative', zIndex: 1 }}>
             <h1 style={{ margin: 0, fontSize: 38, lineHeight: 1.3, fontWeight: 800 }}>
-              ยินดีต้อนรับ<span style={{ color: ORANGE }}>กลับมา</span>
+              ยินดีต้อนรับ<span style={{ color: ORANGE }}></span>
             </h1>
             <p style={{ margin: '12px 0 0', maxWidth: 300, fontSize: 16, lineHeight: 1.7, color: 'rgba(255,255,255,.85)' }}>
               เข้าสู่ระบบเพื่อดูรายการโปรด และค้นหาบอร์ดเกมที่ใช่สำหรับคุณ
             </p>
-          </div>
-
-          <div style={{ position: 'absolute', left: 24, right: 24, bottom: 0, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }} aria-hidden="true">
-            <Dice style={{ width: 64, height: 64, marginRight: 4, marginBottom: 4 }} />
-            <Meeple tone="red" style={{ width: 80, height: 80, filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.35))' }} />
-            <Meeple tone="blue" style={{ width: 112, height: 112, marginLeft: -14, filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.35))' }} />
-            <Meeple tone="yellow" style={{ width: 92, height: 92, marginLeft: -14, filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.35))' }} />
-            <Meeple tone="green" style={{ width: 104, height: 104, marginLeft: -14, filter: 'drop-shadow(0 6px 6px rgba(0,0,0,.35))' }} />
           </div>
         </div>
 

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import Meeple from "./Meeple";
 import "./auth.css";
 
 const API_URL = "https://project-be-fe-clsv.onrender.com";          // พอร์ตของ backend
@@ -90,15 +89,7 @@ export default function Register() {
 
   return (
     <main className="auth-page">
-      <Meeple className="deco deco-r1" color="#2f6fd6" size={140} />
-      <span className="deco deco-dice deco-dice-l" aria-hidden="true">🎲</span>
-
       <section className="auth-card">
-        <div className="auth-top-meeples" aria-hidden="true">
-          <Meeple color="#2f6fd6" size={72} />
-          <Meeple color="#e5483b" size={80} />
-          <Meeple color="#f5b81c" size={72} />
-        </div>
         <h1>สมัครสมาชิก</h1>
         <p className="auth-sub">มาเริ่มต้นการผจญภัยในโลกบอร์ดเกมไปด้วยกัน!</p>
 
