@@ -93,6 +93,9 @@ function UserMenu({ user, logout }) {
             {user.email && <p style={{ margin: '2px 0 0', fontSize: 12, color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>}
           </div>
 
+          <Link to="/profile" role="menuitem" onClick={() => setOpen(false)} style={item}>
+            โปรไฟล์ของฉัน
+          </Link>
           {user.role === 'admin' && (
             <Link to="/admin" role="menuitem" onClick={() => setOpen(false)} style={item}>
               จัดการเกม
